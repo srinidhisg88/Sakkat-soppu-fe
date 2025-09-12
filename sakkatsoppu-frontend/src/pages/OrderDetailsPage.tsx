@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getOrders } from '../services/api';
-import { useLocation as useGeo } from '../hooks/useLocation';
+import { getOrders, getProducts } from '../services/api';
+import { Product } from '../types';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -14,23 +14,59 @@ const statusColors: Record<string, string> = {
 export default function OrderDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getLocation, error: locError } = useGeo();
-  const [updateMsg, setUpdateMsg] = useState('');
 
-  const { data: remoteOrders = [] } = useQuery({
+  type OrderLike = {
+    _id?: string;
+    id?: string;
+    items?: Array<{ productId: string; quantity: number; price?: number }>;
+    status?: string;
+    createdAt?: string;
+    paymentMode?: string;
+    totalPrice?: number;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+  };
+
+  const { data: remoteOrders = [], isLoading: ordersLoading, isFetching: ordersFetching } = useQuery<OrderLike[]>({
     queryKey: ['orders'],
     queryFn: async () => {
       const res = await getOrders();
-      return res.data;
+      const d = res.data as unknown;
+      if (Array.isArray(d)) return d as OrderLike[];
+      if (d && typeof d === 'object' && Array.isArray((d as { data?: unknown[] }).data)) {
+        return ((d as { data?: unknown[] }).data || []) as OrderLike[];
+      }
+      return [] as OrderLike[];
     },
   });
 
-  const order: any = useMemo(() => {
+  // Load products to enrich item names/unit labels
+  const { data: products = [] } = useQuery<Product[]>({
+    queryKey: ['products', 'for-order-details'],
+    queryFn: async () => {
+      const res = await getProducts({ page: 1, limit: 500 });
+      const d = res.data as unknown;
+      if (Array.isArray(d)) return d as Product[];
+      if (d && typeof d === 'object' && Array.isArray((d as { data?: unknown[] }).data)) {
+        return ((d as { data?: unknown[] }).data || []) as Product[];
+      }
+      return [] as Product[];
+    },
+    staleTime: 60_000,
+  });
+  const productMap = new Map(products.map((p) => [p._id, p] as const));
+
+  const order: OrderLike | undefined = useMemo(() => {
     const localRaw = localStorage.getItem('sakkat_orders');
-    const localOrders = localRaw ? JSON.parse(localRaw) : [];
+    const localOrders = (localRaw ? JSON.parse(localRaw) : []) as OrderLike[];
     const combined = [...localOrders, ...remoteOrders];
-    return combined.find((o: any) => (o._id || o.id) === id);
+    return combined.find((o) => (o._id || o.id) === id);
   }, [id, remoteOrders]);
+
+  if (ordersLoading || ordersFetching) {
+    return <div className="max-w-3xl mx-auto p-6">Loading order…</div>;
+  }
 
   if (!order) {
     return (
@@ -41,31 +77,7 @@ export default function OrderDetailsPage() {
     );
   }
 
-  const applyAddressUpdate = (updates: Partial<{ address: string; latitude: number; longitude: number }>) => {
-    // update localStorage order if it's a local order; for remote, just show UI change
-    const isLocal = !!order.id && !order._id;
-    if (isLocal) {
-      const localRaw = localStorage.getItem('sakkat_orders');
-      const localOrders = localRaw ? JSON.parse(localRaw) : [];
-      const updated = localOrders.map((o: any) => {
-        if (o.id === order.id) {
-          return { ...o, ...updates };
-        }
-        return o;
-      });
-      localStorage.setItem('sakkat_orders', JSON.stringify(updated));
-    }
-  };
-
-  const handleUseCurrentLocation = async () => {
-    try {
-      const coords = await getLocation();
-      applyAddressUpdate({ latitude: coords.latitude, longitude: coords.longitude });
-      setUpdateMsg('Location updated for this order');
-    } catch (e) {
-      setUpdateMsg('Failed to fetch location');
-    }
-  };
+  // Address/location update controls removed per requirement
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
@@ -74,15 +86,15 @@ export default function OrderDetailsPage() {
           <h1 className="text-2xl font-bold">Order Details</h1>
           <p className="text-sm text-gray-600">Order ID: {order._id || order.id}</p>
         </div>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[order.status] || 'bg-gray-100 text-gray-800'}`}>
-          {order.status}
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[order.status || 'pending'] || 'bg-gray-100 text-gray-800'}`}>
+          {order.status || 'pending'}
         </span>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6 space-y-4">
         <div className="flex justify-between">
           <span className="text-gray-600">Placed on</span>
-          <span className="font-medium">{new Date(order.createdAt || order.date || Date.now()).toLocaleString()}</span>
+          <span className="font-medium">{new Date(order.createdAt ?? Date.now()).toLocaleString()}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-gray-600">Payment mode</span>
@@ -90,33 +102,42 @@ export default function OrderDetailsPage() {
         </div>
         <div className="flex justify-between">
           <span className="text-gray-600">Total</span>
-          <span className="font-semibold">₹{order.totalPrice || order.total || order.totalAmount}</span>
+          <span className="font-semibold">₹{order.totalPrice ?? 0}</span>
         </div>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold mb-4">Delivery Address</h2>
-        <p className="mb-3">{order.address || 'No address provided'}</p>
-        {(order.latitude && order.longitude) && (
-          <p className="text-sm text-gray-600">Location: {order.latitude.toFixed(6)}, {order.longitude.toFixed(6)}</p>
-        )}
-
-        <div className="mt-4 flex flex-col sm:flex-row gap-3">
-          <Link to="/checkout" className="px-4 py-2 rounded-lg border text-green-700 bg-green-50 hover:bg-green-100">Update Address</Link>
-          <button onClick={handleUseCurrentLocation} className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700">Use My Current Location</button>
-        </div>
-        {updateMsg && <p className="text-sm text-green-700 mt-2">{updateMsg}</p>}
-        {locError && <p className="text-sm text-red-700 mt-1">{locError}</p>}
+        <p className="mb-0">{order.address || 'No address provided'}</p>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
         <h2 className="text-lg font-semibold mb-4">Items</h2>
         <div className="divide-y">
-          {(order.items || []).map((item: any, idx: number) => (
+          {(order.items || []).map((item: { productId: string; quantity: number; price?: number }, idx: number) => (
             <div key={idx} className="py-3 flex justify-between items-center">
               <div>
-                <p className="font-medium">Product ID: {item.productId}</p>
-                <p className="text-sm text-gray-600">Qty: {item.quantity}</p>
+                {(() => {
+                  const pid: unknown = item.productId as unknown;
+                  let prod: Partial<Product> | undefined;
+                  if (typeof pid === 'string') {
+                    prod = productMap.get(pid);
+                  } else if (pid && typeof pid === 'object') {
+                    prod = pid as Partial<Product>;
+                  }
+                  const name = prod?.name || (typeof pid === 'string' ? `Product ${pid.slice(0,6)}…` : 'Product');
+                  const unitLabel = prod?.unitLabel || (typeof prod?.g === 'number' && (prod.g as number) > 0
+                    ? `${prod.g} g`
+                    : typeof prod?.pieces === 'number' && (prod.pieces as number) > 0
+                    ? `${prod.pieces} piece${prod.pieces === 1 ? '' : 's'}`
+                    : undefined);
+                  return (
+                    <>
+                      <p className="font-medium">{name}</p>
+                      <p className="text-sm text-gray-600">Qty: {item.quantity}{unitLabel ? ` • for ${unitLabel}` : ''}</p>
+                    </>
+                  );
+                })()}
               </div>
               <p className="font-medium">₹{(item.price || 0) * item.quantity}</p>
             </div>

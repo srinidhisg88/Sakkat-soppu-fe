@@ -30,9 +30,10 @@ export function SignupPage() {
   });
   const [error, setError] = useState("");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
-  const { getLocation, error: locationError, loading: locationLoading } = useGeoLocation();
+  const { getLocation, error: locationError } = useGeoLocation();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -48,8 +49,10 @@ export function SignupPage() {
         latitude: coords.latitude,
         longitude: coords.longitude,
       }));
+  setLocationConfirmed(true);
     } catch (err) {
       setError("Failed to get location. Please try again or enter address manually.");
+  setLocationConfirmed(false);
     } finally {
       setIsGettingLocation(false);
     }
@@ -59,14 +62,22 @@ export function SignupPage() {
     e.preventDefault();
     try {
       setError("");
-      await signup({
-        ...formData,
-        latitude: formData.latitude || 0,
-        longitude: formData.longitude || 0,
-      });
+  const payloadBase: Record<string, unknown> = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+      };
+  if (formData.phone) payloadBase.phone = formData.phone;
+  if (formData.address) payloadBase.address = formData.address;
+  if (typeof formData.latitude === 'number') payloadBase.latitude = formData.latitude;
+  if (typeof formData.longitude === 'number') payloadBase.longitude = formData.longitude;
+  const payload: Parameters<typeof signup>[0] = payloadBase as Parameters<typeof signup>[0];
+  await signup(payload);
       navigate("/");
     } catch (err) {
-      setError("Failed to create account. Please try again.");
+      const e = err as unknown as { response?: { data?: { message?: string; error?: string } } ; message?: string };
+      const message = e?.response?.data?.message || e?.response?.data?.error || e?.message || 'Failed to create account. Please try again.';
+      setError(message);
     }
   };
 
@@ -74,7 +85,9 @@ export function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl">
         <div className="text-center">
-          <div className="mx-auto h-12 w-12 text-center text-3xl">🌱</div>
+          <div className="mx-auto h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-white overflow-hidden shadow">
+            <img src={new URL('../../logo_final.jpg', import.meta.url).href} alt="Logo" className="w-full h-full object-contain" />
+          </div>
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Create account</h2>
           <p className="mt-2 text-sm text-gray-600">Sign up to start ordering fresh produce</p>
         </div>
@@ -163,8 +176,8 @@ export function SignupPage() {
             />
           </div>
           {locationError && <p className="text-sm text-red-600 mt-1">{locationError}</p>}
-          {formData.latitude && formData.longitude && (
-            <p className="text-sm text-gray-500">Detected location: {formData.latitude.toFixed(5)}, {formData.longitude.toFixed(5)}</p>
+          {locationConfirmed && !locationError && (
+            <p className="text-sm text-green-700 mt-1">Location confirmed</p>
           )}
 
           {/* Location Button */}

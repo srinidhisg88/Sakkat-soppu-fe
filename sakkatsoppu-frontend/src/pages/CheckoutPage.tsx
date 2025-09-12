@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -10,13 +11,25 @@ export function CheckoutPage() {
   const { items, totalPrice, clearCart } = useCart();
   const navigate = useNavigate();
   const { getLocation, error: locationError, loading: locating } = useLocation();
+  const queryClient = useQueryClient();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [formData, setFormData] = useState({
     address: user?.address || '',
     latitude: user?.latitude || 0,
     longitude: user?.longitude || 0,
   });
+
+  // If user address becomes available later (e.g., after fetch), seed it once
+  useEffect(() => {
+    setFormData(prev => {
+      if (user?.address && !prev.address) {
+        return { ...prev, address: user.address };
+      }
+      return prev;
+    });
+  }, [user?.address]);
 
   if (items.length === 0) {
     navigate('/cart');
@@ -39,8 +52,10 @@ export function CheckoutPage() {
         latitude: coords.latitude,
         longitude: coords.longitude,
       }));
+  setLocationConfirmed(true);
     } catch (err) {
       setError((err as Error).message || 'Failed to get location');
+  setLocationConfirmed(false);
     }
   };
 
@@ -50,20 +65,32 @@ export function CheckoutPage() {
       setLoading(true);
       setError('');
 
-      // Try to create remote order; if that fails or user is unauthenticated, create a local order
+      // Try to create remote order; unauthenticated will use local fallback
       let newOrderId: string | undefined;
-      try {
+  try {
         if (isAuthenticated) {
           const res = await createOrder({
             ...formData,
             paymentMode: 'COD',
+            idempotencyKey: (globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`),
           });
-          newOrderId = res.data?._id || res.data?.id;
+          const data = res.data || {};
+          // Handle 201 structure with order object
+          const order = data.order || data;
+          newOrderId = order?._id || order?.id;
+          // Ensure orders list reflects the new order before navigation
+          await queryClient.invalidateQueries({ queryKey: ['orders'] });
+          await queryClient.refetchQueries({ queryKey: ['orders'], type: 'active' });
+          // Optionally show partial success info
+          if (Array.isArray(data.itemsOutOfStock) && data.itemsOutOfStock.length > 0) {
+            // Surface minimal info for now
+            setError(`${data.itemsOutOfStock.length} item(s) were out of stock and not included.`);
+          }
         } else {
           throw new Error('Unauthenticated - create local order');
         }
       } catch (err) {
-        // create local order fallback
+        // create local order fallback (for unauthenticated or hard API failure)
         const localOrdersRaw = localStorage.getItem('sakkat_orders');
         const localOrders = localOrdersRaw ? JSON.parse(localOrdersRaw) : [];
         const id = `local_${Date.now()}`;
@@ -109,19 +136,30 @@ export function CheckoutPage() {
         <div>
           <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
           <div className="bg-white rounded-lg shadow p-6 space-y-4">
-            {items.map((item) => (
-              <div key={item.product._id} className="flex justify-between">
-                <div>
-                  <p className="font-medium">{item.product.name}</p>
-                  <p className="text-sm text-gray-600">
-                    Quantity: {item.quantity}
+            {items.map((item) => {
+              const perG = typeof item.product.g === 'number' ? item.product.g : 0;
+              const perPieces = typeof item.product.pieces === 'number' ? item.product.pieces : 0;
+              const totalG = perG > 0 ? perG * item.quantity : 0;
+              const totalWeight = totalG >= 1000 ? `${(totalG/1000).toFixed(1)} kg` : (totalG > 0 ? `${totalG} g` : null);
+              const totalPieces = perPieces > 0 ? perPieces * item.quantity : 0;
+              return (
+                <div key={item.product._id} className="flex justify-between">
+                  <div className="min-w-0 pr-2">
+                    <p className="font-medium truncate">{item.product.name}</p>
+                    <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                    {perG > 0 && (
+                      <p className="text-xs text-gray-600">Each: {perG} g • Total: {totalWeight}</p>
+                    )}
+                    {perPieces > 0 && (
+                      <p className="text-xs text-gray-600">Each: {perPieces} pcs • Total: {totalPieces} pcs</p>
+                    )}
+                  </div>
+                  <p className="font-medium whitespace-nowrap">
+                    ₹{item.product.price * item.quantity}
                   </p>
                 </div>
-                <p className="font-medium">
-                  ₹{item.product.price * item.quantity}
-                </p>
-              </div>
-            ))}
+              );
+            })}
             <div className="border-t pt-4 mt-4">
               <div className="flex justify-between font-semibold">
                 <span>Total Amount</span>
@@ -167,10 +205,9 @@ export function CheckoutPage() {
               {locating ? 'Getting location...' : 'Use My Current Location'}
             </button>
 
-            {formData.latitude && formData.longitude && (
-              <p className="text-sm text-gray-600">
-                Location: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
-              </p>
+            {/* Coordinates hidden per requirement; still stored and sent to API */}
+            {locationConfirmed && !locationError && (
+              <p className="text-sm text-green-700">Location confirmed</p>
             )}
             {locationError && (
               <p className="text-sm text-red-600">{locationError}</p>

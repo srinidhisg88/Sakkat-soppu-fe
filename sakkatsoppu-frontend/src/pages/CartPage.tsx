@@ -1,11 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useToast } from '../hooks/useToast';
 // import { useAuth } from '../context/AuthContext';
 
 export function CartPage() {
   const { items, totalPrice, updateQuantity, removeItem, loading } = useCart();
   // const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const { show } = useToast();
 
   // Guests can view local cart; encourage login during checkout
 
@@ -42,14 +44,14 @@ export function CartPage() {
           {items.map((item) => (
             <div
               key={item.product._id}
-              className="flex items-start space-x-4 bg-white p-4 rounded-lg shadow"
+              className="flex flex-col sm:flex-row sm:items-start sm:space-x-4 space-y-3 sm:space-y-0 bg-white p-4 rounded-lg shadow"
             >
               <img
                 src={item.product.imageUrl}
                 alt={item.product.name}
-                className="w-24 h-24 object-cover rounded"
+                className="w-full sm:w-24 h-40 sm:h-24 object-cover rounded"
               />
-              <div className="flex-grow">
+              <div className="flex-grow min-w-0">
                 <Link
                   to={`/products/${item.product._id}`}
                   className="text-lg font-semibold hover:text-green-600"
@@ -58,6 +60,30 @@ export function CartPage() {
                 </Link>
                 <p className="text-gray-600">{item.product.category}</p>
                 <p className="font-semibold mt-1">₹{item.product.price}</p>
+                {/* Unit-aware stock breakdown */}
+                <div className="mt-1 text-xs text-gray-600 space-y-0.5">
+                  {item.product.stock > 0 ? (
+                    <>
+                      <p>{item.product.stock} packs available</p>
+                      {typeof item.product.g === 'number' && item.product.g > 0 && (() => {
+                        const per = item.product.g;
+                        const totalG = item.product.stock * per;
+                        const total = totalG >= 1000 ? `${(totalG/1000).toFixed(1)} kg` : `${totalG} g`;
+                        return (
+                          <p>Each: {per} g • Total ~{total}</p>
+                        );
+                      })()}
+                      {typeof item.product.pieces === 'number' && item.product.pieces > 0 && (
+                        <p>Each: {item.product.pieces} pcs • Total {item.product.stock * item.product.pieces} pcs</p>
+                      )}
+                      {item.product.stock <= 5 && (
+                        <p className="text-amber-700">Only {item.product.stock} left</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-red-600">Out of stock</p>
+                  )}
+                </div>
                 <div className="flex items-center space-x-4 mt-2">
                   <div className="flex items-center border rounded">
                     <button
@@ -70,9 +96,14 @@ export function CartPage() {
                     </button>
                     <span className="px-3 py-1">{item.quantity}</span>
                     <button
-                      onClick={() => 
-                        updateQuantity(item.product._id, item.quantity + 1)
-                      }
+                      onClick={() => {
+                        if (item.product.stock && item.quantity >= item.product.stock) {
+                          show('Cannot exceed available stock', { type: 'warning' });
+                          updateQuantity(item.product._id, item.product.stock);
+                        } else {
+                          updateQuantity(item.product._id, item.quantity + 1);
+                        }
+                      }}
                       className="px-3 py-1 text-gray-600 hover:bg-gray-100"
                     >
                       +
@@ -86,7 +117,7 @@ export function CartPage() {
                   </button>
                 </div>
               </div>
-              <p className="text-lg font-semibold">
+              <p className="text-lg font-semibold whitespace-nowrap">
                 ₹{item.product.price * item.quantity}
               </p>
             </div>

@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion';
+import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Product } from '../types';
 import { getProducts } from '../services/api';
-import { products as dummyProducts } from '../constants/dummyData';
 import { ProductCard } from '../components/ProductCard';
 import {
   ShoppingBagIcon,
@@ -12,6 +12,8 @@ import {
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
+// Resolve logo asset (prefer public path for simplicity)
+const heroLogo = new URL('../../logo_final.jpg', import.meta.url).href;
 
 const features = [
   {
@@ -49,66 +51,88 @@ const itemVariants = {
   }
 };
 
-export function HomePage() {
+type HomePageProps = { startAnimations?: boolean };
+
+export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) => {
   const { data: products = [], isLoading } = useQuery<Product[]>({
-    queryKey: ['products'],
+    queryKey: ['products', 'home-featured'],
     queryFn: async () => {
-      const response = await getProducts();
-      return response.data;
+      const res = await getProducts({ page: 1, limit: 8 });
+      type ProductsEnvelope = { data?: Product[]; products?: Product[]; items?: Product[]; results?: Product[] } | Product[];
+      const payload = res.data as ProductsEnvelope;
+      const list = Array.isArray(payload)
+        ? payload
+        : payload?.data ?? payload?.products ?? payload?.items ?? payload?.results ?? [];
+      return list as Product[];
     },
   });
 
-  const effectiveProducts = (!isLoading && products && products.length > 0) ? products : (dummyProducts as unknown as Product[]);
+  const effectiveProducts = products;
+
 
   return (
     <div className="space-y-16 pb-16">
       {/* Hero Section */}
-      <motion.section 
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.6 }}
+      <motion.section
         className="relative bg-gradient-to-r from-green-600 to-green-400 text-white py-24 px-4 rounded-3xl mx-4 overflow-hidden"
       >
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 0.1 }}
-          transition={{ duration: 0.8 }}
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={startAnimations ? { scale: 1, opacity: 0.1 } : { scale: 0.95, opacity: 0 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="absolute inset-0 bg-[url('/pattern.svg')] bg-center"
         />
         
         <div className="max-w-4xl mx-auto text-center relative z-10">
-          <motion.h1
-            initial={{ y: -20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="text-5xl md:text-6xl font-bold mb-6 leading-tight"
-          >
-            Fresh from Farmers,
-            <br />
-            Straight to You
-          </motion.h1>
-          
-          <motion.p
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            className="text-xl md:text-2xl mb-8 text-green-100"
-          >
-            Supporting local farmers while bringing you the freshest organic produce
-          </motion.p>
-          
+          <div className="mx-auto mb-6 w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-white shadow p-2 overflow-hidden">
+            <img
+              src={heroLogo}
+              alt="Sakkat Soppu logo"
+              className="w-full h-full object-contain"
+            />
+          </div>
+
           <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.6, duration: 0.5 }}
+            variants={{
+              hidden: { opacity: 1 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.15, delayChildren: 0.1 }
+              }
+            }}
+            initial="hidden"
+            animate={startAnimations ? 'visible' : 'hidden'}
           >
-            <Link
-              to="/products"
-              className="inline-flex items-center space-x-2 bg-white text-green-600 px-8 py-4 rounded-full font-semibold hover:bg-green-50 transform hover:scale-105 transition-all shadow-lg"
+            <motion.h1
+              variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4"
             >
-              <ShoppingBagIcon className="h-5 w-5" />
-              <span>Shop Now</span>
-            </Link>
+              Fresh from Farmers,
+              <br />
+              Straight to You
+            </motion.h1>
+
+            <motion.p
+              variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+              className="text-xl md:text-2xl mb-8 text-green-100"
+            >
+              Supporting local farmers while bringing you the freshest organic produce
+            </motion.p>
+
+            <motion.div
+              variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+            >
+              <Link
+                to="/products"
+                className="inline-flex items-center space-x-2 bg-white text-green-600 px-8 py-4 rounded-full font-semibold hover:bg-green-50 transform hover:scale-105 transition-all shadow-lg"
+              >
+                <ShoppingBagIcon className="h-5 w-5" />
+                <span>Shop Now</span>
+              </Link>
+            </motion.div>
           </motion.div>
         </div>
       </motion.section>
@@ -159,7 +183,7 @@ export function HomePage() {
               className="inline-block w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full"
             />
           </div>
-        ) : (
+        ) : effectiveProducts && Array.isArray(effectiveProducts) && effectiveProducts.length > 0 ? (
           <motion.div
             variants={containerVariants}
             initial="hidden"
@@ -173,6 +197,8 @@ export function HomePage() {
               </motion.div>
             ))}
           </motion.div>
+        ) : (
+          <div className="text-center py-12 text-gray-600">No products to show.</div>
         )}
       </section>
     </div>

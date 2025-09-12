@@ -2,7 +2,6 @@ import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getFarmer, getFarmerProducts } from '../services/api';
 import { Farmer, Product } from '../types';
-import { farmers as dummyFarmers, products as dummyProducts } from '../constants/dummyData';
 import { ProductCard } from '../components/ProductCard';
 
 export function FarmerProfilePage() {
@@ -10,28 +9,12 @@ export function FarmerProfilePage() {
 
   const { data: farmer, isLoading: farmerLoading } = useQuery<Farmer>({
     queryKey: ['farmer', id],
-    queryFn: async () => {
-      try {
-        const response = await getFarmer(id!);
-        return response.data;
-      } catch (e) {
-        const fallback = (dummyFarmers as unknown as Farmer[]).find((f) => f._id === id);
-        if (!fallback) throw e;
-        return fallback;
-      }
-    },
+  queryFn: async () => (await getFarmer(id!)).data,
   });
 
   const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
     queryKey: ['farmerProducts', id],
-    queryFn: async () => {
-      try {
-        const response = await getFarmerProducts(id!);
-        return response.data;
-      } catch (e) {
-        return (dummyProducts as unknown as Product[]).filter((p) => p.farmerId === id);
-      }
-    },
+  queryFn: async () => (await getFarmerProducts(id!)).data,
   });
 
   if (farmerLoading || !farmer) {

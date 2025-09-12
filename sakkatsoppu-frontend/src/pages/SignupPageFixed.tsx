@@ -30,6 +30,7 @@ export function SignupPage() {
   });
   const [error, setError] = useState("");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
   const { signup } = useAuth();
   const navigate = useNavigate();
   const { getLocation } = useGeoLocation();
@@ -48,8 +49,10 @@ export function SignupPage() {
         latitude: coords.latitude,
         longitude: coords.longitude,
       }));
+  setLocationConfirmed(true);
     } catch (err) {
       setError("Failed to get location. Please try again or enter address manually.");
+  setLocationConfirmed(false);
     } finally {
       setIsGettingLocation(false);
     }
@@ -166,6 +169,9 @@ export function SignupPage() {
           >
             {isGettingLocation ? "Getting Location..." : "Use my current location"}
           </button>
+          {locationConfirmed && (
+            <p className="text-sm text-green-700">Location confirmed</p>
+          )}
 
           {/* Submit Button */}
           <button

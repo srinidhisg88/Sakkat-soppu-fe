@@ -1,12 +1,13 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { CartItem, Product } from '../types';
 import * as api from '../services/api';
-import { products as dummyProducts } from '../constants/dummyData';
 import { useAuth } from './AuthContext';
 
 interface CartContextType {
   items: (CartItem & { product: Product })[];
   totalItems: number;
+  uniqueItems: number;
   totalPrice: number;
   addToCart: (productId: string, quantity: number) => Promise<void>;
   updateQuantity: (productId: string, quantity: number) => Promise<void>;
@@ -22,44 +23,85 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const { isAuthenticated } = useAuth();
 
-  const fetchCart = async () => {
+  type RemoteRow = { productId: Product | string; quantity: number };
+  const mapRemoteCart = useMemo(() => (rows: RemoteRow[]) =>
+    rows.map((row) => {
+      if (typeof row.productId === 'string') {
+        return {
+          productId: row.productId,
+          quantity: row.quantity,
+          product: {
+            _id: row.productId,
+            name: 'Product',
+            price: 0,
+            stock: 0,
+          } as Product,
+        } as CartContextType['items'][number];
+      }
+      const prod = row.productId as unknown as Product;
+      return { productId: prod._id, quantity: row.quantity, product: prod } as CartContextType['items'][number];
+    }), []);
+
+  const fetchCart = useCallback(async () => {
     // If user is authenticated, try fetching remote cart; otherwise load from localStorage
-    if (isAuthenticated) {
+  if (isAuthenticated) {
       try {
         setLoading(true);
         const response = await api.getCart();
-        setItems(response.data);
+        const rows = (response.data?.cart || []) as RemoteRow[];
+        setItems(mapRemoteCart(rows));
       } catch (error) {
         console.error('Error fetching cart:', error);
       } finally {
         setLoading(false);
       }
     } else {
-      // Load from localStorage for unauthenticated users
-      try {
-        const raw = localStorage.getItem('sakkat_cart');
-        if (raw) {
-          setItems(JSON.parse(raw));
-        } else {
-          setItems([]);
-        }
-      } catch (err) {
-        console.error('Error reading local cart:', err);
-        setItems([]);
-      }
+      // Unauthenticated: keep cart empty (no dummy/local)
+      setItems([]);
     }
-  };
+  }, [isAuthenticated, mapRemoteCart]);
 
   useEffect(() => {
     fetchCart();
-  }, [isAuthenticated]);
+  }, [fetchCart]);
 
   const addToCart = async (productId: string, quantity: number) => {
     if (isAuthenticated) {
       try {
         setLoading(true);
-        await api.addToCart(productId, quantity);
-        await fetchCart();
+        const existing = items.find(i => i.productId === productId);
+        // Enforce stock limits if product info is present in current items list
+        const productInfo = existing?.product || items.find(i => i.product._id === productId)?.product;
+        if (productInfo && typeof productInfo.stock === 'number') {
+          const currentQty = existing?.quantity || 0;
+          const remaining = Math.max(0, productInfo.stock - currentQty);
+          if (remaining <= 0) {
+            setLoading(false);
+            throw new Error('No stock remaining');
+          }
+          if (quantity > remaining) {
+            quantity = remaining;
+          }
+        }
+        if (!existing) {
+          // First add must use POST /cart/add to avoid 404 on PATCH increment
+          const res = await api.addToCartRemote({ productId, quantity: Math.max(1, quantity) });
+          const rows = (res.data?.cart || []) as RemoteRow[];
+          setItems(mapRemoteCart(rows));
+        } else {
+          if (quantity > 1) {
+            // Increase to desired total using absolute set: current + quantity
+            const targetQty = existing.quantity + quantity;
+            const res = await api.patchCartItem({ productId, quantity: targetQty });
+            const rows = (res.data?.cart || []) as RemoteRow[];
+            setItems(mapRemoteCart(rows));
+          } else {
+            // Simple increment
+            const res = await api.patchCartItem({ productId, action: 'increment' });
+            const rows = (res.data?.cart || []) as RemoteRow[];
+            setItems(mapRemoteCart(rows));
+          }
+        }
       } catch (error) {
         console.error('Error adding to cart:', error);
         throw error;
@@ -67,100 +109,81 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     } else {
-      // local cart logic
-      setItems((prev) => {
-        const existing = prev.find((i) => i.product._id === productId);
-        if (existing) {
-          const next = prev.map((i) =>
-            i.product._id === productId ? { ...i, quantity: i.quantity + quantity } : i
-          );
-          localStorage.setItem('sakkat_cart', JSON.stringify(next));
-          return next;
-        }
-        // Need to fetch product details from dummy data if available
-  const product = (dummyProducts as any[]).find((p: any) => p._id === productId);
-  const prod = product || ({ _id: productId, name: 'Product', price: 0, imageUrl: '', category: '', stock: 0, unit: '' } as any);
-        // CartItem shape: { productId, quantity, product }
-        const newItem = {
-          productId: prod._id,
-          quantity,
-          product: prod,
-        } as unknown as (CartItem & { product: Product });
-        const next = [...prev, newItem];
-        localStorage.setItem('sakkat_cart', JSON.stringify(next));
-        return next;
-      });
+      throw new Error('Please log in to add items to the cart.');
     }
   };
 
   const updateQuantity = async (productId: string, quantity: number) => {
     if (isAuthenticated) {
       try {
-        setLoading(true);
+        // Optimistic update to avoid flashing a loader on every +/- click
+        const prev = items;
         if (quantity <= 0) {
-          await removeItem(productId);
+          // Optimistically remove
+          setItems(prev.filter((i) => i.productId !== productId));
+          const res = await api.removeFromCart(productId);
+          const rows = (res.data?.cart || []) as RemoteRow[];
+          setItems(mapRemoteCart(rows));
         } else {
-          await api.updateCartItem(productId, quantity);
-          await fetchCart();
+          // Optimistically set the new quantity
+          const next = prev.map((i) => (i.productId === productId ? { ...i, quantity } : i));
+          setItems(next);
+          const res = await api.patchCartItem({ productId, quantity });
+          const rows = (res.data?.cart || []) as RemoteRow[];
+          setItems(mapRemoteCart(rows));
         }
       } catch (error) {
         console.error('Error updating cart:', error);
+        // Rollback optimistic update
+        await fetchCart();
         throw error;
-      } finally {
-        setLoading(false);
       }
     } else {
-      setItems((prev) => {
-        let next = prev
-          .map((i) => (i.product._id === productId ? { ...i, quantity } : i))
-          .filter((i) => i.quantity > 0);
-        localStorage.setItem('sakkat_cart', JSON.stringify(next));
-        return next;
-      });
+      throw new Error('Please log in to update cart.');
     }
   };
 
   const removeItem = async (productId: string) => {
     if (isAuthenticated) {
       try {
-        setLoading(true);
-        await api.removeFromCart(productId);
-        await fetchCart();
+  // Optimistic remove to avoid loader flicker
+  const prev = items;
+  setItems(prev.filter((i) => i.productId !== productId));
+  const res = await api.removeFromCart(productId);
+  const rows = (res.data?.cart || []) as RemoteRow[];
+  setItems(mapRemoteCart(rows));
       } catch (error) {
         console.error('Error removing from cart:', error);
+  await fetchCart();
         throw error;
-      } finally {
-        setLoading(false);
       }
     } else {
-      setItems((prev) => {
-        const next = prev.filter((i) => i.product._id !== productId);
-        localStorage.setItem('sakkat_cart', JSON.stringify(next));
-        return next;
-      });
+      throw new Error('Please log in to remove items from cart.');
     }
   };
 
   const clearCart = () => {
     setItems([]);
-    try {
-      localStorage.removeItem('sakkat_cart');
-    } catch (err) {
-      // ignore
+    if (isAuthenticated) {
+      api.clearCartRemote()
+        .then((res) => {
+          const rows = (res.data?.cart || []) as RemoteRow[];
+          setItems(mapRemoteCart(rows));
+        })
+        .catch(() => {});
     }
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = items.reduce(
-    (sum, item) => sum + item.quantity * item.product.price,
-    0
-  );
+  const uniqueItems = items.length;
+  const totalPrice = items.reduce((sum, item) => sum + item.quantity * (item.product.price || 0), 0);
 
   return (
     <CartContext.Provider
       value={{
         items,
         totalItems,
+  uniqueItems,
         totalPrice,
         addToCart,
         updateQuantity,

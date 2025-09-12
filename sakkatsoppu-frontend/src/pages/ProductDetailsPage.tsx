@@ -1,57 +1,171 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useParams, Link, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Product, Farmer } from '../types';
-import { products as dummyProducts } from '../constants/dummyData';
-import { farmers as dummyFarmers } from '../constants/dummyData';
-import { getProduct, getFarmer } from '../services/api';
+import { Product, Farmer, Category } from '../types';
+import { getProduct, getFarmer, getCategories } from '../services/api';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
+import { useToast } from '../hooks/useToast';
 
 export function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const [quantity, setQuantity] = useState(1);
-  const { addToCart } = useCart();
+  const { addToCart, updateQuantity, items } = useCart();
+  const { isAuthenticated } = useAuth();
+  const { show } = useToast();
+  const navigate = useNavigate();
+  const location = useRouterLocation();
 
   const { data: product, isLoading: productLoading } = useQuery<Product>({
     queryKey: ['product', id],
+    enabled: !!id,
+    queryFn: async () => (await getProduct(id!)).data,
+  });
+
+  const { data: categories = [] } = useQuery<Category[]>({
+    queryKey: ['categories', 'list'],
     queryFn: async () => {
-      try {
-        const response = await getProduct(id!);
-        return response.data;
-      } catch (e) {
-        // fallback to dummy product
-        const fallback = (dummyProducts as unknown as Product[]).find((p) => p._id === id);
-        if (!fallback) throw e;
-        return fallback as Product;
-      }
+      const res = await getCategories();
+      type CatEnvelope = { data?: Category[]; categories?: Category[] } | Category[];
+      const payload = res.data as CatEnvelope;
+      return (Array.isArray(payload) ? payload : payload?.data ?? payload?.categories ?? []) as Category[];
     },
+    staleTime: 10 * 60 * 1000,
   });
 
   const { data: farmer, isLoading: farmerLoading } = useQuery<Farmer>({
     queryKey: ['farmer', product?.farmerId],
     enabled: !!product?.farmerId,
     queryFn: async () => {
-      try {
-        const response = await getFarmer(product!.farmerId);
-        return response.data;
-      } catch (e) {
-        const fallback = (dummyFarmers as unknown as Farmer[]).find((f) => f._id === product!.farmerId);
-        if (!fallback) throw e;
-        return fallback;
-      }
+      const fid = product?.farmerId;
+      if (!fid) throw new Error('No farmer id');
+      const res = await getFarmer(fid as string);
+      return res.data;
     },
   });
 
   const handleAddToCart = async () => {
     if (!product) return;
+    if (!isAuthenticated) {
+      navigate('/login', { state: { from: location.pathname + location.search } });
+      return;
+    }
     try {
-      await addToCart(product._id, quantity);
-      // Show success message
+      const existingQty = items.find(i => i.productId === product._id)?.quantity || 0;
+      const remaining = Math.max(0, (product.stock || 0) - existingQty);
+      if (remaining <= 0) {
+        show('No more stock available for this item', { type: 'warning' });
+        return;
+      }
+      const reqQty = Math.min(quantity, remaining);
+      if (reqQty < quantity) {
+        show(`Only ${remaining} more pack(s) available. Added ${reqQty}.`, { type: 'warning' });
+      }
+      await addToCart(product._id, reqQty);
+      show('Added to cart', { type: 'success' });
     } catch (error) {
       console.error('Error adding to cart:', error);
-      // Show error message
+      show('Failed to add to cart', { type: 'error' });
     }
   };
+
+  // Build a robust image gallery from product fields (safe with undefined product)
+  const galleryImages = useMemo(() => {
+    const imgs = new Set<string>();
+    const pushSafe = (v?: unknown) => {
+      if (!v) return;
+      if (Array.isArray(v)) {
+        v.forEach((u) => {
+          const s = typeof u === 'string' ? u : '';
+          if (s) imgs.add(s);
+        });
+      } else if (typeof v === 'string') {
+        imgs.add(v);
+      }
+    };
+
+    if (product) {
+      // Known fields
+      pushSafe(product.imageUrl);
+      pushSafe(product.images);
+
+      // Possible alternative fields from backend variants
+      const anyProduct = product as unknown as Record<string, unknown>;
+      pushSafe(anyProduct.image);
+      pushSafe(anyProduct.imageURLs);
+      pushSafe(anyProduct.imageUrls);
+      pushSafe(anyProduct.gallery);
+    }
+
+    return Array.from(imgs);
+  }, [product]);
+
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [maxAspect, setMaxAspect] = useState<number | null>(null);
+
+  const clampIdx = useCallback(
+    (i: number) => {
+      if (galleryImages.length === 0) return 0;
+      return Math.max(0, Math.min(galleryImages.length - 1, i));
+    },
+    [galleryImages.length]
+  );
+
+  const showPrev = useCallback(() => {
+    setCurrentIdx((i) => (i - 1 + galleryImages.length) % Math.max(1, galleryImages.length));
+  }, [galleryImages.length]);
+
+  const showNext = useCallback(() => {
+    setCurrentIdx((i) => (i + 1) % Math.max(1, galleryImages.length));
+  }, [galleryImages.length]);
+
+  // Reset index via effect if gallery changes or index goes out of range
+  useEffect(() => {
+    if (galleryImages.length === 0) {
+      if (currentIdx !== 0) setCurrentIdx(0);
+      return;
+    }
+    if (currentIdx >= galleryImages.length) setCurrentIdx(0);
+  }, [galleryImages.length, currentIdx]);
+
+  // Compute the largest aspect ratio across images to prevent layout shift
+  useEffect(() => {
+    let cancelled = false;
+    if (!galleryImages || galleryImages.length === 0) {
+      setMaxAspect(1);
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const loadRatios = async () => {
+      const loaders = galleryImages.map(
+        (src) =>
+          new Promise<number>((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+              const w = img.naturalWidth || 1;
+              const h = img.naturalHeight || 1;
+              resolve(h / w || 1);
+            };
+            img.onerror = () => resolve(1);
+            img.src = src;
+          })
+      );
+      const ratios = await Promise.all(loaders);
+      if (!cancelled) {
+        const maxR = Math.max(1, ...ratios);
+        setMaxAspect(Number.isFinite(maxR) ? maxR : 1);
+      }
+    };
+
+    loadRatios();
+    return () => {
+      cancelled = true;
+    };
+  }, [galleryImages]);
+
+  const mainImage = (galleryImages[clampIdx(currentIdx)] || product?.imageUrl || '') as string;
 
   if (productLoading && !product) {
     return <div className="text-center py-8">Loading product details...</div>;
@@ -61,37 +175,111 @@ export function ProductDetailsPage() {
     return <div className="text-center py-8">Product not found.</div>;
   }
 
+  // Normalize stock and compute remaining considering cart
+  const existingQty = items.find(i => i.productId === product._id)?.quantity || 0;
+  const numericStock = Number((product as unknown as { stock?: unknown })?.stock ?? 0);
+  const remaining = Math.max(0, numericStock - existingQty);
+  const inCart = existingQty > 0;
+
+  // Derive unit info
+  const derivedUnitLabel = product?.unitLabel || (
+    typeof product?.g === 'number' && product.g > 0
+      ? `${product.g} g`
+      : typeof product?.pieces === 'number' && product.pieces > 0
+      ? `${product.pieces} piece${product.pieces === 1 ? '' : 's'}`
+      : undefined
+  );
+  const derivedPriceForUnit = product?.priceForUnitLabel || (
+    typeof product?.g === 'number' && product.g > 0 ? `${product.price} for ${product.g} g` : undefined
+  );
+
+  // Map categoryId to name if needed
+  const catName = (product?.category && product.category.trim()) ||
+    (product?.categoryId && categories.find(c => c._id === product.categoryId)?.name) ||
+    product?.category;
+
   return (
-    <div className="max-w-6xl mx-auto px-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <div className="max-w-6xl mx-auto px-3 sm:px-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
         {/* Product Images */}
         <div className="space-y-4">
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="w-full rounded-lg shadow-md"
-          />
-          <div className="grid grid-cols-4 gap-2">
-            {(product.images || []).map((image, index) => (
-              <img
-                key={index}
-                src={image}
-                alt={`${product.name} ${index + 1}`}
-                className="w-full h-24 object-cover rounded cursor-pointer"
-              />
-            ))}
+          <div
+            className="relative group w-full rounded-lg shadow-md bg-white overflow-hidden"
+            style={{ aspectRatio: maxAspect ?? 1 }}
+          >
+            {/* Main image fills a fixed aspect-ratio box to avoid layout shift */}
+            <img
+              src={mainImage}
+              alt={product.name}
+              className="absolute inset-0 w-full h-full object-contain"
+            />
+            {galleryImages.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Previous image"
+                  onClick={showPrev}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-700 rounded-full p-2 shadow hidden md:block"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  aria-label="Next image"
+                  onClick={showNext}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-gray-700 rounded-full p-2 shadow hidden md:block"
+                >
+                  ›
+                </button>
+              </>
+            )}
           </div>
+          {galleryImages.length > 1 && (
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-5 lg:grid-cols-6 gap-2">
+              {galleryImages.map((image, index) => {
+                const active = index === currentIdx;
+                return (
+                  <button
+                    key={index}
+                    type="button"
+                    onClick={() => setCurrentIdx(index)}
+                    className={`relative w-full aspect-square rounded overflow-hidden ring-2 ${
+                      active ? 'ring-green-500' : 'ring-transparent'
+                    }`}
+                    aria-label={`Show image ${index + 1}`}
+                  >
+                    <img
+                      src={image}
+                      alt={`${product.name} ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                    {active && (
+                      <span className="absolute inset-0 ring-2 ring-green-500 rounded pointer-events-none"></span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         {/* Product Info */}
-        <div className="space-y-6">
+  <div className="space-y-4 sm:space-y-6">
           <div>
-            <h1 className="text-3xl font-bold">{product.name}</h1>
-            <p className="text-gray-600 mt-2">{product.category}</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">{product.name}</h1>
+            <p className="text-gray-600 mt-1 sm:mt-2">{catName}</p>
           </div>
 
-          <div className="flex items-center space-x-4">
-            <span className="text-2xl font-bold">₹{product.price}</span>
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <div>
+              <span className="text-xl sm:text-2xl font-bold">₹{product.price}</span>
+              {derivedUnitLabel && (
+                <span className="text-xs sm:text-sm text-gray-500 ml-2">for {derivedUnitLabel}</span>
+              )}
+              {derivedPriceForUnit && (
+                <div className="text-xs sm:text-sm text-gray-500">{derivedPriceForUnit}</div>
+              )}
+            </div>
             {product.isOrganic && (
               <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm">
                 Organic
@@ -99,40 +287,117 @@ export function ProductDetailsPage() {
             )}
           </div>
 
-          <p className="text-gray-700">{product.description}</p>
-
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center border rounded">
-              <button
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100"
-              >
-                -
-              </button>
-              <span className="px-4 py-2">{quantity}</span>
-              <button
-                onClick={() => setQuantity(quantity + 1)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100"
-              >
-                +
-              </button>
-            </div>
-            <p className="text-gray-600">
-              {product.stock} units available
-            </p>
+          <div>
+            <p className="text-gray-700">{product.description}</p>
           </div>
 
-          <button
-            onClick={handleAddToCart}
-            disabled={product.stock === 0}
-            className={`w-full py-3 rounded-lg font-semibold ${
-              product.stock > 0
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {product.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
-          </button>
+          {/* Stock information */
+          /* Use numericStock to avoid string '0' issues from backend */}
+    <div className="space-y-1">
+            {numericStock > 0 ? (
+              <>
+                <p className="text-gray-800 font-medium">{numericStock} packs available</p>
+                {typeof product.g === 'number' && product.g > 0 && (
+                  <p className="text-sm text-gray-600">Each pack: {product.g} g • Total ~{((numericStock * product.g) / 1000).toFixed(1)} kg</p>
+                )}
+                {typeof product.pieces === 'number' && product.pieces > 0 && (
+                  <p className="text-sm text-gray-600">Each pack: {product.pieces} pcs • Total {numericStock * product.pieces} pcs</p>
+                )}
+                {numericStock <= 5 && (
+      <p className="text-xs text-amber-700">Only {numericStock} left</p>
+                )}
+              </>
+            ) : (
+              <p className="text-red-600 font-medium">Out of stock</p>
+            )}
+          </div>
+
+          {inCart ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-700">In your cart</div>
+                <div className="flex items-center border rounded overflow-hidden">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await updateQuantity(product._id, existingQty - 1);
+                      } catch {
+                        show('Failed to update quantity', { type: 'error' });
+                      }
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100"
+                    aria-label="Decrease quantity"
+                  >
+                    -
+                  </button>
+                  <span className="px-4 py-2 min-w-[3rem] text-center">{existingQty}</span>
+                  <button
+                    onClick={async () => {
+                      if (existingQty + 1 > numericStock) {
+                        show('Cannot exceed available stock', { type: 'warning' });
+                        return;
+                      }
+                      try {
+                        await updateQuantity(product._id, existingQty + 1);
+                      } catch {
+                        show('Failed to update quantity', { type: 'error' });
+                      }
+                    }}
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100"
+                    aria-label="Increase quantity"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              {remaining > 0 && (
+                <div className="flex items-center space-x-3 sm:space-x-4">
+                  <div className="flex items-center border rounded">
+                    <button
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      className="px-3 sm:px-4 py-2 text-gray-600 hover:bg-gray-100 active:scale-95"
+                    >
+                      -
+                    </button>
+                    <span className="px-3 sm:px-4 py-2">{quantity}</span>
+                    <button
+                      onClick={() => {
+                        if (remaining <= 0) {
+                          show('No more stock available for this item', { type: 'warning' });
+                          return;
+                        }
+                        if (quantity >= remaining) {
+                          show('Cannot exceed available stock', { type: 'warning' });
+                          setQuantity(Math.max(1, remaining));
+                        } else {
+                          setQuantity(quantity + 1);
+                        }
+                      }}
+                      className="px-3 sm:px-4 py-2 text-gray-600 hover:bg-gray-100 active:scale-95"
+                    >
+                      +
+                    </button>
+                  </div>
+                  {/* Stock summary is shown above in detail section */}
+                </div>
+              )}
+
+              <button
+                onClick={handleAddToCart}
+                disabled={remaining <= 0}
+                className={`w-full py-3 rounded-lg font-semibold ${
+                  remaining > 0
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                {remaining > 0 ? 'Add to Cart' : 'Out of Stock'}
+              </button>
+            </>
+          )}
 
           {/* Farmer Info */}
           {farmer && !farmerLoading && (

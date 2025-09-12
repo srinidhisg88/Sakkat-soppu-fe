@@ -1,15 +1,31 @@
 export interface Product {
   _id: string;
   name: string;
-  category: string;
+  category?: string;
+  categoryId?: string;
   price: number;
   stock: number;
-  imageUrl: string;
-  images: string[];
-  videos: string[];
-  description: string;
-  isOrganic: boolean;
-  farmerId: string;
+  // Media
+  imageUrl?: string;
+  images?: string[];
+  videos?: string[];
+  // Details
+  description?: string;
+  isOrganic?: boolean;
+  farmerId?: string;
+  // Units from backend schema
+  g?: number;
+  pieces?: number | null;
+  unitLabel?: string; // e.g., "250 g"
+  priceForUnitLabel?: string; // e.g., "30 for 250 g"
+  pricePerKg?: number | null;
+  pricePerPiece?: number | null;
+}
+
+export interface Category {
+  _id: string;
+  name: string;
+  slug: string;
 }
 
 export interface Farmer {

@@ -1,16 +1,15 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile } from '../services/api';
 import { useLocation } from '../hooks/useLocation';
 
 export function ProfilePage() {
-  const { user, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  const { user, isAuthenticated, initializing, refreshProfile } = useAuth();
   const { getLocation } = useLocation();
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -19,10 +18,22 @@ export function ProfilePage() {
     longitude: user?.longitude || 0,
   });
 
-  if (!isAuthenticated || !user) {
-    navigate('/login');
-    return null;
-  }
+  // Keep form in sync when user loads/updates (e.g., right after login)
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || '',
+        phone: user.phone || '',
+        address: user.address || '',
+        latitude: user.latitude || 0,
+        longitude: user.longitude || 0,
+      });
+    }
+  }, [user]);
+
+  if (initializing) return <div className="py-8 text-center">Loading profile…</div>;
+  if (!isAuthenticated) return null;
+  if (!user) return <div className="py-8 text-center">Loading user…</div>;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -40,9 +51,11 @@ export function ProfilePage() {
         latitude: coords.latitude,
         longitude: coords.longitude,
       }));
-      setSuccess('Location updated successfully');
+  setSuccess('Location updated successfully');
+  setLocationConfirmed(true);
     } catch (err) {
       setError('Failed to get location');
+  setLocationConfirmed(false);
     }
   };
 
@@ -51,6 +64,8 @@ export function ProfilePage() {
     try {
       await updateProfile(formData);
       setSuccess('Profile updated successfully');
+  // Refresh auth user so read-only view is up-to-date
+  await refreshProfile();
       setIsEditing(false);
     } catch (err) {
       setError('Failed to update profile');
@@ -137,12 +152,10 @@ export function ProfilePage() {
             >
               Update My Location
             </button>
-
-            {formData.latitude && formData.longitude && (
-              <p className="text-sm text-gray-600 mb-4">
-                Location: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
-              </p>
+            {locationConfirmed && (
+              <p className="text-sm text-green-700 mb-2">Location confirmed</p>
             )}
+            {/* Coordinates hidden per requirement; still stored in formData for API */}
 
             <div className="flex space-x-4">
               <button
@@ -182,14 +195,7 @@ export function ProfilePage() {
               <p className="mt-1">{user.address}</p>
             </div>
 
-            {user.latitude && user.longitude && (
-              <div>
-                <h2 className="text-sm font-medium text-gray-700">Location</h2>
-                <p className="mt-1">
-                  {user.latitude.toFixed(6)}, {user.longitude.toFixed(6)}
-                </p>
-              </div>
-            )}
+            {/* Coordinates hidden per requirement on read-only view */}
 
             <button
               onClick={() => setIsEditing(true)}

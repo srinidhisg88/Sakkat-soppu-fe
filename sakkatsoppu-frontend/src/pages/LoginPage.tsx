@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+const authLogo = '/logo_final.jpg';
 import {
   EnvelopeIcon,
   LockClosedIcon,
   ArrowRightIcon,
 } from '@heroicons/react/24/outline';
+
+type RouteState = { from?: { pathname?: string } } | null;
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,8 +25,9 @@ export function LoginPage() {
       setError('');
       await login(email, password);
       // Navigate to the page the user was trying to access, or home
-      const from = (location.state as any)?.from?.pathname || '/';
-      navigate(from);
+  const state = (location.state as RouteState) || null;
+  const from = state?.from?.pathname || '/';
+      navigate(from, { replace: true });
     } catch (err) {
       setError('Failed to login. Please check your credentials.');
     }
@@ -39,12 +43,12 @@ export function LoginPage() {
       >
         <div>
           <motion.div
-            initial={{ scale: 0.5 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5 }}
-            className="mx-auto h-12 w-12 text-center text-3xl"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.4 }}
+            className="mx-auto h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-white overflow-hidden shadow"
           >
-            🌿
+            <img src={authLogo} alt="Logo" className="w-full h-full object-contain" />
           </motion.div>
           <motion.h2
             initial={{ opacity: 0 }}
