@@ -54,6 +54,10 @@ export interface Order {
   userId: string;
   items: OrderItem[];
   totalPrice: number;
+  // Optional pricing breakdown from backend
+  subtotalPrice?: number;
+  discountAmount?: number;
+  couponCode?: string;
   status: 'pending' | 'confirmed' | 'delivered' | 'cancelled';
   paymentMode: 'COD';
   address: string;

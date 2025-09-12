@@ -187,6 +187,21 @@ export function OrdersPage() {
                 <p className="text-lg font-bold">₹{order.totalPrice ?? 0}</p>
               </div>
             </div>
+
+            {order.couponCode && typeof order.discountAmount === 'number' && order.discountAmount > 0 && (
+              <div className="mt-2 flex justify-between items-center bg-green-50 rounded-md px-3 py-2">
+                <p className="text-xs text-green-800">
+                  Coupon <span className="font-semibold">{order.couponCode}</span> applied
+                  {typeof order.subtotalPrice === 'number' && order.subtotalPrice > 0
+                    ? (() => {
+                        const pct = Math.round((order.discountAmount! / order.subtotalPrice!) * 100);
+                        return ` • Saved ${pct}%`;
+                      })()
+                    : ''}
+                </p>
+                <p className="text-sm font-medium text-green-700">-₹{order.discountAmount}</p>
+              </div>
+            )}
           </div>
         ))}
       </div>

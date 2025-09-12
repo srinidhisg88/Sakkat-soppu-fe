@@ -22,7 +22,10 @@ export default function OrderDetailsPage() {
     status?: string;
     createdAt?: string;
     paymentMode?: string;
-    totalPrice?: number;
+  subtotalPrice?: number;
+  discountAmount?: number;
+  couponCode?: string;
+  totalPrice?: number;
     address?: string;
     latitude?: number;
     longitude?: number;
@@ -100,6 +103,25 @@ export default function OrderDetailsPage() {
           <span className="text-gray-600">Payment mode</span>
           <span className="font-medium">{order.paymentMode || 'COD'}</span>
         </div>
+        {typeof order.subtotalPrice === 'number' && (
+          <div className="flex justify-between">
+            <span className="text-gray-600">Subtotal</span>
+            <span className="font-medium">₹{order.subtotalPrice}</span>
+          </div>
+        )}
+        {order.couponCode && typeof order.discountAmount === 'number' && order.discountAmount > 0 && (
+          <div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Coupon ({order.couponCode})</span>
+              <span className="font-medium text-green-700">-₹{order.discountAmount}</span>
+            </div>
+            {typeof order.subtotalPrice === 'number' && order.subtotalPrice > 0 && (
+              <p className="text-xs text-green-700 mt-1">
+                You saved {Math.round((order.discountAmount! / order.subtotalPrice!) * 100)}% on this order.
+              </p>
+            )}
+          </div>
+        )}
         <div className="flex justify-between">
           <span className="text-gray-600">Total</span>
           <span className="font-semibold">₹{order.totalPrice ?? 0}</span>

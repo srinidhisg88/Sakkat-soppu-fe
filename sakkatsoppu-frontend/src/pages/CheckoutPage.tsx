@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect, useMemo } from 'react';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { createOrder } from '../services/api';
+import { createOrder, getCoupons } from '../services/api';
 import { useLocation } from '../hooks/useLocation';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function CheckoutPage() {
   const { user, isAuthenticated } = useAuth();
@@ -15,6 +16,19 @@ export function CheckoutPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [locationConfirmed, setLocationConfirmed] = useState(false);
+  const [couponOpen, setCouponOpen] = useState(false);
+  const [couponInput, setCouponInput] = useState('');
+  const [couponError, setCouponError] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<null | {
+    code: string;
+    discountType: 'percentage' | 'amount';
+    discountValue: number;
+    minOrderValue?: number | null;
+    maxDiscount?: number | null;
+    startsAt?: string | null;
+    expiresAt?: string | null;
+    isActive?: boolean;
+  }>(null);
   const [formData, setFormData] = useState({
     address: user?.address || '',
     latitude: user?.latitude || 0,
@@ -31,10 +45,12 @@ export function CheckoutPage() {
     });
   }, [user?.address]);
 
-  if (items.length === 0) {
-    navigate('/cart');
-    return null;
-  }
+  // Redirect to cart if no items
+  useEffect(() => {
+    if (items.length === 0) {
+      navigate('/cart', { replace: true });
+    }
+  }, [items.length, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement> | React.ChangeEvent<HTMLTextAreaElement>) => {
     const { name, value } = e.target as HTMLInputElement | HTMLTextAreaElement;
@@ -59,6 +75,62 @@ export function CheckoutPage() {
     }
   };
 
+  // Fetch coupons for validation
+  type Coupon = {
+    code: string;
+    discountType: 'percentage' | 'amount';
+    discountValue: number;
+    minOrderValue?: number | null;
+    maxDiscount?: number | null;
+    startsAt?: string | null;
+    expiresAt?: string | null;
+    isActive?: boolean;
+  };
+
+  const { data: coupons = [], isLoading: couponsLoading } = useQuery<Coupon[]>({
+    queryKey: ['admin', 'coupons'],
+    queryFn: async () => {
+      try {
+        const res = await getCoupons({ page: 1, limit: 100 });
+        console.log(res)
+        const d: unknown = res.data;
+        if (Array.isArray(d)) return d as Coupon[];
+        if (d && typeof d === 'object' && Array.isArray((d as { data?: unknown[] }).data)) {
+          return ((d as { data?: unknown[] }).data || []) as Coupon[];
+        }
+        return [] as Coupon[];
+      } catch (err: unknown) {
+        // If forbidden or unauthenticated, treat as no coupons available
+        const status = (err as { response?: { status?: number } })?.response?.status;
+        if (status === 401 || status === 403) return [] as Coupon[];
+        throw err;
+      }
+    },
+    staleTime: 5 * 60_000,
+  });
+
+  const validateCoupon = (code: string) => {
+    const now = Date.now();
+    const c = coupons.find((x) => x.code.toLowerCase() === code.trim().toLowerCase());
+    
+    if (!c) return { valid: false, reason: 'Coupon not found' } as const;
+    if (c.isActive === false) return { valid: false, reason: 'Coupon is inactive' } as const;
+    if (c.startsAt && new Date(c.startsAt).getTime() > now) return { valid: false, reason: 'Coupon not started yet' } as const;
+    if (c.expiresAt && new Date(c.expiresAt).getTime() < now) return { valid: false, reason: 'Coupon expired' } as const;
+    if (c.minOrderValue && totalPrice < c.minOrderValue) return { valid: false, reason: `Minimum order ₹${c.minOrderValue}` } as const;
+    return { valid: true, coupon: c } as const;
+  };
+
+  const discountAmount = useMemo(() => {
+    if (!appliedCoupon) return 0;
+    if (appliedCoupon.discountType === 'amount') return Math.max(0, Math.min(appliedCoupon.discountValue, totalPrice));
+    const pct = (appliedCoupon.discountValue / 100) * totalPrice;
+    const capped = appliedCoupon.maxDiscount == null ? pct : Math.min(pct, appliedCoupon.maxDiscount);
+    return Math.floor(capped);
+  }, [appliedCoupon, totalPrice]);
+
+  const finalAmount = Math.max(0, totalPrice - discountAmount);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -73,6 +145,7 @@ export function CheckoutPage() {
             ...formData,
             paymentMode: 'COD',
             idempotencyKey: (globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`),
+            couponCode: appliedCoupon?.code || undefined,
           });
           const data = res.data || {};
           // Handle 201 structure with order object
@@ -127,6 +200,8 @@ export function CheckoutPage() {
     }
   };
 
+  if (items.length === 0) return null;
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">Checkout</h1>
@@ -160,10 +235,24 @@ export function CheckoutPage() {
                 </div>
               );
             })}
-            <div className="border-t pt-4 mt-4">
+            <div className="border-t pt-4 mt-4 space-y-2">
               <div className="flex justify-between font-semibold">
-                <span>Total Amount</span>
+                <span>Subtotal</span>
                 <span>₹{totalPrice}</span>
+              </div>
+              {appliedCoupon && (
+                <div className="flex justify-between text-green-700">
+                  <span>Coupon ({appliedCoupon.code})</span>
+                  <span>-₹{discountAmount}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-sm text-gray-600">
+                <span>Delivery Fee</span>
+                <span>Free</span>
+              </div>
+              <div className="flex justify-between text-base">
+                <span className="font-semibold">Payable</span>
+                <span className="font-bold">₹{finalAmount}</span>
               </div>
             </div>
           </div>
@@ -213,6 +302,70 @@ export function CheckoutPage() {
               <p className="text-sm text-red-600">{locationError}</p>
             )}
 
+            {/* Coupon form */}
+            <div className="border-t pt-4">
+              <button
+                type="button"
+                onClick={() => setCouponOpen((v) => !v)}
+                className="w-full text-left text-green-700 font-medium flex items-center justify-between"
+              >
+                Apply Coupon
+                <span className={`transition-transform ${couponOpen ? 'rotate-180' : ''}`}>⌄</span>
+              </button>
+              <AnimatePresence initial={false}>
+                {couponOpen && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden mt-3"
+                  >
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Enter coupon code"
+                        value={couponInput}
+                        onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                      />
+                      <button
+                        type="button"
+                        disabled={couponsLoading || !couponInput.trim()}
+                        onClick={() => {
+                          const res = validateCoupon(couponInput);
+              if (!res.valid) {
+                            setAppliedCoupon(null);
+                            setCouponError(res.reason);
+                          } else {
+                            setAppliedCoupon({
+                code: res.coupon.code,
+                discountType: res.coupon.discountType,
+                discountValue: res.coupon.discountValue,
+                minOrderValue: res.coupon.minOrderValue ?? null,
+                maxDiscount: res.coupon.maxDiscount ?? null,
+                startsAt: res.coupon.startsAt ?? null,
+                expiresAt: res.coupon.expiresAt ?? null,
+                isActive: res.coupon.isActive,
+                            });
+                            setCouponOpen(false);
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-lg text-white ${couponsLoading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}
+                      >
+                        {couponsLoading ? 'Checking…' : 'Apply'}
+                      </button>
+                    </div>
+                    {couponError && (
+                      <p className="text-sm text-red-600 mt-2">{couponError}</p>
+                    )}
+                    {appliedCoupon && (
+                      <p className="text-sm text-green-700 mt-2">Applied {appliedCoupon.code}. You save ₹{discountAmount}.</p>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
             <div className="border-t pt-6">
               <h3 className="text-lg font-semibold mb-4">Payment Method</h3>
               <div className="flex items-center space-x-2 text-gray-700">
@@ -231,7 +384,7 @@ export function CheckoutPage() {
                   : 'bg-green-600 hover:bg-green-700 text-white'
               }`}
             >
-              {loading ? 'Placing Order...' : 'Place Order'}
+              {loading ? 'Placing Order...' : `Place Order${appliedCoupon ? ` • ₹${finalAmount}` : ''}`}
             </button>
           </form>
         </div>
