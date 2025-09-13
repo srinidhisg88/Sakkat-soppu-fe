@@ -8,7 +8,9 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   initializing: boolean;
+  avatarUrl: string | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<{ needsProfileCompletion: boolean } | void>;
   signup: (userData: {
     name: string;
     email: string;
@@ -31,37 +33,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // Helper to keep avatar persisted across refreshes
+  const setAndPersistAvatar = (url: string | null) => {
+    setAvatarUrl(url);
+    if (url) {
+      try { localStorage.setItem('avatarUrl', url); } catch { /* ignore */ }
+    } else {
+      try { localStorage.removeItem('avatarUrl'); } catch { /* ignore */ }
+    }
+  };
 
   useEffect(() => {
-    // Check for existing token on mount
     const storedToken = localStorage.getItem('token');
+    // Hydrate avatar from localStorage early to avoid flicker on reload
+    const storedAvatar = localStorage.getItem('avatarUrl');
+    if (storedAvatar) setAvatarUrl(storedAvatar);
     if (storedToken) {
       setToken(storedToken);
-      // Fetch user profile
       api.getProfile()
-        .then(response => setUser(response.data))
+        .then(response => {
+          setUser(response.data);
+          const anyData = response.data as unknown as Record<string, unknown>;
+          const pic = (anyData?.avatarUrl as string) || (anyData?.picture as string) || null;
+          if (pic) setAndPersistAvatar(pic);
+        })
         .catch((err) => {
-          // If token invalid (401/403), clear. Otherwise keep token and remain logged in.
           const status = err?.response?.status;
           if (status === 401 || status === 403) {
             localStorage.removeItem('token');
             setToken(null);
             setUser(null);
+            setAndPersistAvatar(null);
           }
         })
         .finally(() => setInitializing(false));
     } else {
-      // Try cookie-based session fetch
       api.getProfile()
-        .then(response => setUser(response.data))
+        .then(response => {
+          setUser(response.data);
+          const anyData = response.data as unknown as Record<string, unknown>;
+          const pic = (anyData?.avatarUrl as string) || (anyData?.picture as string) || null;
+          if (pic) setAndPersistAvatar(pic);
+        })
         .catch(() => {
           setUser(null);
+          setAndPersistAvatar(null);
         })
         .finally(() => setInitializing(false));
     }
   }, []);
 
-  // Install a response interceptor to auto-logout on 401/403
   useEffect(() => {
     const id = apiClient.interceptors.response.use(
       (res) => res,
@@ -74,6 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           localStorage.removeItem('token');
           setToken(null);
           setUser(null);
+          setAndPersistAvatar(null);
         }
         return Promise.reject(error);
       }
@@ -86,6 +110,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshProfile = async () => {
     const res = await api.getProfile();
     setUser(res.data);
+    const anyData = res.data as unknown as Record<string, unknown>;
+    const pic = (anyData?.avatarUrl as string) || (anyData?.picture as string) || avatarUrl || null;
+  if (pic) setAndPersistAvatar(pic);
   };
 
   const login = async (email: string, password: string) => {
@@ -93,14 +120,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { token: newToken, user: userData } = response.data;
     localStorage.setItem('token', newToken);
     setToken(newToken);
-    // Immediately fetch full profile to ensure address/phone are populated
     try {
       const prof = await api.getProfile();
       setUser(prof.data);
+      const anyData = prof.data as unknown as Record<string, unknown>;
+      const pic = (anyData?.avatarUrl as string) || (anyData?.picture as string) || null;
+  if (pic) setAndPersistAvatar(pic);
     } catch {
-      // Fallback to user from login response if profile fetch fails
       setUser(userData);
     }
+  };
+
+  const loginWithGoogle = async (idToken: string) => {
+    const res = await api.googleAuth(idToken);
+    const { token: newToken, user: userData, needsProfileCompletion } = res.data as Partial<AuthResponse> & { needsProfileCompletion?: boolean };
+    try {
+      const payload = JSON.parse(atob(idToken.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+      const pic: string | undefined = payload?.picture;
+  if (pic) setAndPersistAvatar(pic);
+    } catch {
+      // ignore decode errors
+    }
+    if (newToken) {
+      localStorage.setItem('token', newToken);
+      setToken(newToken);
+    }
+    try {
+      const prof = await api.getProfile();
+      setUser(prof.data);
+      const anyData = prof.data as unknown as Record<string, unknown>;
+      const pic = (anyData?.avatarUrl as string) || (anyData?.picture as string) || avatarUrl || null;
+  if (pic) setAndPersistAvatar(pic);
+    } catch {
+      if (userData) setUser(userData);
+    }
+    return { needsProfileCompletion: !!needsProfileCompletion };
   };
 
   const signup = async (userData: {
@@ -112,31 +166,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     latitude?: number;
     longitude?: number;
   }) => {
-  const response = await api.signup(userData);
-  const { token: newToken, user: newUser } = response.data as Partial<AuthResponse>;
+    const response = await api.signup(userData);
+    const { token: newToken, user: newUser } = response.data as Partial<AuthResponse>;
     if (newToken) {
       localStorage.setItem('token', newToken);
       setToken(newToken);
     }
-    // Fetch profile after signup if token present; else fallback to returned user
     if (newToken) {
       try {
         const prof = await api.getProfile();
         setUser(prof.data);
+        const anyData = prof.data as unknown as Record<string, unknown>;
+        const pic = (anyData?.avatarUrl as string) || (anyData?.picture as string) || null;
+  setAndPersistAvatar(pic || null);
         return;
       } catch {
-        // ignore, fallback below
+        // ignore profile fetch errors; fallback user state will be used
       }
     }
     if (newUser) setUser(newUser);
   };
 
   const logout = () => {
-    // Attempt backend logout to clear cookie
     api.logout().catch(() => {});
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
+  setAndPersistAvatar(null);
   };
 
   const forgotPassword = async (email: string) => {
@@ -148,17 +204,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider 
+    <AuthContext.Provider
       value={{
         user,
         token,
-  initializing,
+        initializing,
+        avatarUrl,
         login,
+        loginWithGoogle,
         signup,
         forgotPassword,
         resetPassword,
         logout,
-  refreshProfile,
+        refreshProfile,
         isAuthenticated: !!token || !!user,
       }}
     >

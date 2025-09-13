@@ -80,6 +80,9 @@ export const forgotPassword = (email: string) => api.post('/auth/forgot-password
 export const resetPassword = (payload: { token: string; newPassword: string; email?: string }) =>
   api.post('/auth/reset-password', payload);
 
+// Google OAuth
+export const googleAuth = (idToken: string) => api.post('/auth/google', { idToken });
+
 // User Profile
 export const getProfile = () => api.get('/users/profile');
 export const updateProfile = (userData: {

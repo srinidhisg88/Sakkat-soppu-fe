@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLocation as useGeoLocation } from "../hooks/useLocation";
+import { isWithinMysore } from "../utils/geo";
 import {
   UserIcon,
   EnvelopeIcon,
@@ -31,9 +32,11 @@ export function SignupPage() {
   const [error, setError] = useState("");
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationConfirmed, setLocationConfirmed] = useState(false);
-  const { signup } = useAuth();
+  const { signup, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
   const { getLocation, error: locationError } = useGeoLocation();
+  const googleBtnRef = useRef<HTMLDivElement | null>(null);
+  const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -62,6 +65,14 @@ export function SignupPage() {
     e.preventDefault();
     try {
       setError("");
+      // Validate service availability (Mysore area) if coordinates present
+      if (typeof formData.latitude === 'number' && typeof formData.longitude === 'number') {
+        const ok = isWithinMysore(formData.latitude, formData.longitude);
+        if (!ok) {
+          setError('Sorry, the service isn\'t available in your city right now.');
+          return;
+        }
+      }
   const payloadBase: Record<string, unknown> = {
         name: formData.name,
         email: formData.email,
@@ -81,6 +92,69 @@ export function SignupPage() {
     }
   };
 
+  // Google Identity Services on signup
+  useEffect(() => {
+  const clientId = googleClientId;
+  if (!clientId) return;
+    const id = 'google-identity';
+    if (!document.getElementById(id)) {
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.async = true;
+      s.defer = true;
+      s.id = id;
+      document.body.appendChild(s);
+      s.onload = initGoogle;
+    } else {
+      initGoogle();
+    }
+
+    function initGoogle() {
+      // @ts-expect-error GIS global is injected by external script
+      if (!window.google || !google.accounts || !google.accounts.id) return;
+      // @ts-expect-error GIS global is injected by external script
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: async (response: { credential?: string }) => {
+          const idToken = response.credential;
+          if (!idToken) return;
+          try {
+            // Check service area if location available
+            try {
+              const coords = await getLocation();
+              if (coords && !isWithinMysore(coords.latitude, coords.longitude)) {
+                setError('Sorry, the service isn\'t available in your city right now.');
+                return;
+              }
+            } catch {
+              // ignore when location is not available
+            }
+            const result = await loginWithGoogle(idToken);
+            const needs = result && 'needsProfileCompletion' in result ? result.needsProfileCompletion : false;
+            if (needs) {
+              navigate('/profile', { replace: true, state: { promptComplete: true } });
+            } else {
+              navigate('/', { replace: true });
+            }
+          } catch {
+            // ignore
+          }
+        },
+        ux_mode: 'popup',
+      });
+      if (googleBtnRef.current) {
+        // @ts-expect-error GIS global is injected by external script
+        google.accounts.id.renderButton(googleBtnRef.current, {
+          theme: 'filled_blue',
+          size: 'large',
+          shape: 'pill',
+          width: 320,
+          text: 'signup_with',
+        });
+      }
+    }
+  }, [loginWithGoogle, navigate, googleClientId, getLocation]);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl">
@@ -94,7 +168,7 @@ export function SignupPage() {
 
         {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+  <form onSubmit={handleSubmit} className="space-y-6">
           {/* Name */}
           <div className="relative">
             <UserIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
@@ -197,6 +271,31 @@ export function SignupPage() {
           >
             Create Account
           </button>
+
+          <div className="relative">
+            <div className="flex items-center my-4">
+              <div className="flex-grow border-t border-gray-200" />
+              <span className="mx-3 text-gray-400 text-sm">or</span>
+              <div className="flex-grow border-t border-gray-200" />
+            </div>
+            {googleClientId ? (
+              <div ref={googleBtnRef} className="flex justify-center" style={{ minHeight: 44 }} />
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  type="button"
+                  disabled
+                  className="w-full max-w-xs flex items-center justify-center gap-2 rounded-full bg-blue-600 text-white px-4 py-3 opacity-70 cursor-not-allowed"
+                  title="Google sign-up unavailable"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5">
+                    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.8 31.7 29.3 35 24 35c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.6 5.1 29.6 3 24 3 12 3 9 7.3 6.3 14.7z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.2 16.5 18.7 13 24 13c3 0 5.7 1.1 7.8 3l5.7-5.7C34.6 5.1 29.6 3 24 3 16 3 9 7.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 45c5.2 0 10-2 13.6-5.3l-6.3-5.3C29.1 35.5 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.6 5.1C8.7 40.6 15.8 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1 2.9-3.1 5.2-5.7 6.8l.1.1 6.3 5.3c-.4.3 7 5 7 5 4.1-3.8 6.5-9.4 6.5-15.9 0-1.2-.1-2.3-.4-3.5z"/></svg>
+                  Sign up with Google
+                </button>
+                <p className="text-xs text-gray-500">Set VITE_GOOGLE_CLIENT_ID to enable</p>
+              </div>
+            )}
+          </div>
 
           <p className="text-center text-sm text-gray-600">
             Already have an account?{" "}

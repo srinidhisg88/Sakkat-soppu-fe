@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useLocation as useRouteLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile } from '../services/api';
 import { useLocation } from '../hooks/useLocation';
@@ -6,7 +7,9 @@ import { useLocation } from '../hooks/useLocation';
 export function ProfilePage() {
   const { user, isAuthenticated, initializing, refreshProfile } = useAuth();
   const { getLocation } = useLocation();
-  const [isEditing, setIsEditing] = useState(false);
+  const routeLocation = useRouteLocation();
+  const promptComplete = ((routeLocation.state as unknown as { promptComplete?: boolean })?.promptComplete) || false;
+  const [isEditing, setIsEditing] = useState<boolean>(promptComplete);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [locationConfirmed, setLocationConfirmed] = useState(false);
@@ -75,6 +78,12 @@ export function ProfilePage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">My Profile</h1>
+
+      {((routeLocation.state as unknown as { promptComplete?: boolean })?.promptComplete) && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 px-4 py-3 text-sm">
+          Complete your profile to finish sign-in
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-6">

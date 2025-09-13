@@ -24,7 +24,7 @@ const features = [
   {
     icon: <TruckIcon className="h-6 w-6" />,
     title: "Fast Delivery",
-    description: "Same day delivery to your doorstep"
+  description: "Fast, reliable delivery across the city"
   },
   {
     icon: <UserGroupIcon className="h-6 w-6" />,

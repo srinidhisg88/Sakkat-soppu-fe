@@ -15,7 +15,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 export function Navbar() {
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, user, logout, avatarUrl } = useAuth();
   const { uniqueItems } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -127,8 +127,12 @@ export function Navbar() {
                   whileHover="hover"
                   className="relative group"
                 >
-                  <Link to="/profile" className="flex items-center space-x-1 py-2 px-3 rounded-lg group-hover:bg-green-50 transition-colors">
-                    <UserCircleIcon className="h-5 w-5 text-green-600" />
+                  <Link to="/profile" className="flex items-center space-x-2 py-2 px-3 rounded-lg group-hover:bg-green-50 transition-colors">
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={user?.name || 'Profile'} className="h-6 w-6 rounded-full object-cover border border-green-200" />
+                    ) : (
+                      <UserCircleIcon className="h-5 w-5 text-green-600" />
+                    )}
                     <span>{user?.name}</span>
                   </Link>
                 </motion.div>
@@ -209,7 +213,11 @@ export function Navbar() {
               {isAuthenticated ? (
                 <div className="pt-2 border-t">
                   <Link onClick={() => setMobileOpen(false)} to="/profile" className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-green-50">
-                    <UserCircleIcon className="h-5 w-5 text-green-600" />
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt={user?.name || 'Profile'} className="h-6 w-6 rounded-full object-cover border border-green-200" />
+                    ) : (
+                      <UserCircleIcon className="h-5 w-5 text-green-600" />
+                    )}
                     <span>{user?.name}</span>
                   </Link>
                   <button onClick={() => { setMobileOpen(false); logout(); }} className="w-full flex items-center gap-2 py-2 px-3 rounded-lg text-red-600 hover:bg-red-50">
