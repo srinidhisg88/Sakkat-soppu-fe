@@ -5,6 +5,7 @@ import type { AxiosError } from 'axios';
 import { Product, Category } from '../types';
 import { getProducts, getCategories } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
+import { EmptyState } from '../components/EmptyState';
 import {
   MagnifyingGlassIcon,
   FunnelIcon,
@@ -256,15 +257,13 @@ export function ProductsPage() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="col-span-full text-center py-12"
+                className="col-span-full"
               >
-                <div className="text-4xl mb-4">😕</div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                  No products found
-                </h3>
-                <p className="text-gray-600">
-                  Try adjusting your search or filter criteria
-                </p>
+                <EmptyState
+                  title="No products found"
+                  description="Try adjusting your search or filter criteria."
+                  icon={<span>😕</span>}
+                />
               </motion.div>
             )}
           </motion.div>

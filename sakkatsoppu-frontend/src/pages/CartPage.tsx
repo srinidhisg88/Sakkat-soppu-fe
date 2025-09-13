@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../hooks/useToast';
+import { EmptyState } from '../components/EmptyState';
 // import { useAuth } from '../context/AuthContext';
 
 export function CartPage() {
@@ -18,18 +19,13 @@ export function CartPage() {
   if (items.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Your Cart is Empty</h2>
-          <p className="text-gray-600 mb-6">
-            Browse our products and add some items to your cart
-          </p>
-          <Link
-            to="/products"
-            className="inline-block bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700"
-          >
-            Browse Products
-          </Link>
-        </div>
+        <EmptyState
+          title="Your Cart is Empty"
+          description="Browse our products and add some items to your cart."
+          actionLabel="Browse Products"
+          actionTo="/products"
+          icon={<span>🧺</span>}
+        />
       </div>
     );
   }

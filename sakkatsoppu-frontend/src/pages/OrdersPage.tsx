@@ -3,12 +3,26 @@ import { useQuery } from '@tanstack/react-query';
 import { Order, Product } from '../types';
 import { getOrders, getProducts } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { EmptyState } from '../components/EmptyState';
+// import { useNavigate } from 'react-router-dom';
 
 export function OrdersPage() {
   const { isAuthenticated } = useAuth();
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const [status, setStatus] = useState<'all' | 'pending' | 'confirmed' | 'delivered' | 'cancelled'>('all');
+
+  type OrderStatus = 'pending' | 'confirmed' | 'delivered' | 'cancelled';
+  const normalizeStatus = (val?: string): OrderStatus => {
+    if (!val) return 'pending';
+    const s = String(val).trim().toLowerCase();
+    if (s === 'canceled') return 'cancelled';
+    if (s.startsWith('deliver')) return 'delivered';
+    if (s.startsWith('confirm')) return 'confirmed';
+    if (s.startsWith('pend')) return 'pending';
+    return (['pending','confirmed','delivered','cancelled'] as const).includes(s as OrderStatus)
+      ? (s as OrderStatus)
+      : 'pending';
+  };
 
   type OrderLike = Partial<Order> & {
     _id?: string;
@@ -67,30 +81,9 @@ export function OrdersPage() {
     effectiveOrders = raw ? (JSON.parse(raw) as OrderLike[]) : [];
   }
 
-  const filtered: OrderLike[] = status === 'all' ? effectiveOrders : effectiveOrders.filter((o) => o.status === status);
-
-  if (isLoading && effectiveOrders.length === 0) {
-    return <div className="text-center py-8">Loading orders...</div>;
-  }
-
-  if (filtered.length === 0) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">No Orders Yet</h2>
-          <p className="text-gray-600 mb-6">
-            You haven't placed any orders yet. Start shopping to place your first order!
-          </p>
-          <button
-            onClick={() => navigate('/products')}
-            className="inline-block bg-green-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-green-700"
-          >
-            Browse Products
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const filtered: OrderLike[] = status === 'all'
+    ? effectiveOrders
+    : effectiveOrders.filter((o) => normalizeStatus(o.status as string | undefined) === status);
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6">
@@ -107,6 +100,32 @@ export function OrdersPage() {
           </button>
         ))}
       </div>
+
+      {isLoading && effectiveOrders.length === 0 && (
+        <div className="py-4">
+          <EmptyState title="Loading orders..." icon={<span>⏳</span>} />
+        </div>
+      )}
+
+      {filtered.length === 0 ? (
+        <div className="py-4">
+          {effectiveOrders.length > 0 && status !== 'all' ? (
+            <EmptyState
+              title={`No orders with status "${status}"`}
+              description="Try switching the status filter to see other orders."
+              icon={<span>🔎</span>}
+            />
+          ) : (
+            <EmptyState
+              title="No Orders Yet"
+              description="You haven't placed any orders yet. Start shopping to place your first order!"
+              actionLabel="Browse Products"
+              actionTo="/products"
+              icon={<span>🧺</span>}
+            />
+          )}
+        </div>
+      ) : null}
 
   <div className="space-y-4">
   {filtered.map((order) => (
@@ -131,15 +150,18 @@ export function OrdersPage() {
         <span
         className={`px-2 py-0.5 rounded-full text-xs font-medium
                   ${
-          order.status === 'delivered'
+          normalizeStatus(order.status as string | undefined) === 'delivered'
                       ? 'bg-green-100 text-green-800'
-                      : order.status === 'cancelled'
+                      : normalizeStatus(order.status as string | undefined) === 'cancelled'
                       ? 'bg-red-100 text-red-800'
                       : 'bg-yellow-100 text-yellow-800'
                   }
                 `}
               >
-        {(order.status || 'pending').charAt(0).toUpperCase() + (order.status || 'pending').slice(1)}
+        {(() => {
+          const s = normalizeStatus(order.status as string | undefined);
+          return s.charAt(0).toUpperCase() + s.slice(1);
+        })()}
               </span>
             </div>
 
