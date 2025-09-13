@@ -5,7 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { createOrder, getCoupons } from '../services/api';
 import { useLocation } from '../hooks/useLocation';
-import { motion, AnimatePresence } from 'framer-motion';
+// Drawer animations handled inside CouponDrawer
+import CouponDrawer from '../components/CouponDrawer';
 
 export function CheckoutPage() {
   const { user, isAuthenticated } = useAuth();
@@ -17,8 +18,7 @@ export function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [couponOpen, setCouponOpen] = useState(false);
-  const [couponInput, setCouponInput] = useState('');
-  const [couponError, setCouponError] = useState('');
+  // manual input moved into drawer component
   const [appliedCoupon, setAppliedCoupon] = useState<null | {
     code: string;
     discountType: 'percentage' | 'amount';
@@ -87,7 +87,7 @@ export function CheckoutPage() {
     isActive?: boolean;
   };
 
-  const { data: coupons = [], isLoading: couponsLoading } = useQuery<Coupon[]>({
+  const { data: coupons = [] } = useQuery<Coupon[]>({
     queryKey: ['admin', 'coupons'],
     queryFn: async () => {
       try {
@@ -109,17 +109,7 @@ export function CheckoutPage() {
     staleTime: 5 * 60_000,
   });
 
-  const validateCoupon = (code: string) => {
-    const now = Date.now();
-    const c = coupons.find((x) => x.code.toLowerCase() === code.trim().toLowerCase());
-    
-    if (!c) return { valid: false, reason: 'Coupon not found' } as const;
-    if (c.isActive === false) return { valid: false, reason: 'Coupon is inactive' } as const;
-    if (c.startsAt && new Date(c.startsAt).getTime() > now) return { valid: false, reason: 'Coupon not started yet' } as const;
-    if (c.expiresAt && new Date(c.expiresAt).getTime() < now) return { valid: false, reason: 'Coupon expired' } as const;
-    if (c.minOrderValue && totalPrice < c.minOrderValue) return { valid: false, reason: `Minimum order ₹${c.minOrderValue}` } as const;
-    return { valid: true, coupon: c } as const;
-  };
+  // validateCoupon now handled implicitly inside drawer by eligibility checks
 
   const discountAmount = useMemo(() => {
     if (!appliedCoupon) return 0;
@@ -306,64 +296,15 @@ export function CheckoutPage() {
             <div className="border-t pt-4">
               <button
                 type="button"
-                onClick={() => setCouponOpen((v) => !v)}
+                onClick={() => setCouponOpen(true)}
                 className="w-full text-left text-green-700 font-medium flex items-center justify-between"
               >
                 Apply Coupon
                 <span className={`transition-transform ${couponOpen ? 'rotate-180' : ''}`}>⌄</span>
               </button>
-              <AnimatePresence initial={false}>
-                {couponOpen && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden mt-3"
-                  >
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        placeholder="Enter coupon code"
-                        value={couponInput}
-                        onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponError(''); }}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                      />
-                      <button
-                        type="button"
-                        disabled={couponsLoading || !couponInput.trim()}
-                        onClick={() => {
-                          const res = validateCoupon(couponInput);
-              if (!res.valid) {
-                            setAppliedCoupon(null);
-                            setCouponError(res.reason);
-                          } else {
-                            setAppliedCoupon({
-                code: res.coupon.code,
-                discountType: res.coupon.discountType,
-                discountValue: res.coupon.discountValue,
-                minOrderValue: res.coupon.minOrderValue ?? null,
-                maxDiscount: res.coupon.maxDiscount ?? null,
-                startsAt: res.coupon.startsAt ?? null,
-                expiresAt: res.coupon.expiresAt ?? null,
-                isActive: res.coupon.isActive,
-                            });
-                            setCouponOpen(false);
-                          }
-                        }}
-                        className={`px-4 py-2 rounded-lg text-white ${couponsLoading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'}`}
-                      >
-                        {couponsLoading ? 'Checking…' : 'Apply'}
-                      </button>
-                    </div>
-                    {couponError && (
-                      <p className="text-sm text-red-600 mt-2">{couponError}</p>
-                    )}
-                    {appliedCoupon && (
-                      <p className="text-sm text-green-700 mt-2">Applied {appliedCoupon.code}. You save ₹{discountAmount}.</p>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {appliedCoupon && (
+                <p className="text-sm text-green-700 mt-2">Applied {appliedCoupon.code}. You save ₹{discountAmount}.</p>
+              )}
             </div>
 
             <div className="border-t pt-6">
@@ -389,6 +330,25 @@ export function CheckoutPage() {
           </form>
         </div>
       </div>
+      <CouponDrawer
+        isOpen={couponOpen}
+        onClose={() => setCouponOpen(false)}
+        coupons={coupons}
+        totalAmount={totalPrice}
+        appliedCode={appliedCoupon?.code || null}
+        onApply={(c) => {
+          setAppliedCoupon({
+            code: c.code,
+            discountType: c.discountType,
+            discountValue: c.discountValue,
+            minOrderValue: c.minOrderValue ?? null,
+            maxDiscount: c.maxDiscount ?? null,
+            startsAt: c.startsAt ?? null,
+            expiresAt: c.expiresAt ?? null,
+            isActive: c.isActive,
+          });
+        }}
+      />
     </div>
   );
 }
