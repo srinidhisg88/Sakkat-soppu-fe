@@ -7,18 +7,12 @@ import { getProducts, getCategories } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
 import {
   MagnifyingGlassIcon,
-  AdjustmentsHorizontalIcon,
   FunnelIcon,
 } from '@heroicons/react/24/outline';
 
 // Categories are derived from API data (no hardcoded list)
 
-const sortOptions = [
-  { value: 'name', label: 'Name', icon: '📝' },
-  { value: 'price-asc', label: 'Price: Low to High', icon: '💰' },
-  { value: 'price-desc', label: 'Price: High to Low', icon: '💎' },
-  { value: 'rating', label: 'Rating', icon: '⭐' },
-];
+// Removed price-based sorting options per request
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -33,7 +27,6 @@ const containerVariants = {
 
 export function ProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [sortBy, setSortBy] = useState('name');
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data: products = [], isLoading, isError, refetch } = useQuery<Product[]>({
@@ -144,19 +137,9 @@ export function ProductsPage() {
         description.toLowerCase().includes(q);
 
       return matchesCategory && matchesSearch;
-    })
-    .sort((a, b) => {
-  switch (sortBy) {
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'price-asc':
-          return a.price - b.price;
-        case 'price-desc':
-          return b.price - a.price;
-        default:
-          return 0;
-      }
-    });
+  })
+  // Default to name ordering; price sorting removed
+  .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <motion.div 
@@ -177,14 +160,14 @@ export function ProductsPage() {
         </p>
       </motion.div>
 
-      {/* Filters and Search */}
+    {/* Filters and Search */}
       <motion.div 
         className="bg-white rounded-xl shadow-lg p-4 sm:p-6 mb-6 sm:mb-8"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.4 }}
       >
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
           {/* Search */}
           <div className="relative">
             <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-3" />
@@ -213,21 +196,7 @@ export function ProductsPage() {
             </select>
           </div>
 
-          {/* Sort Options */}
-          <div className="relative">
-            <AdjustmentsHorizontalIcon className="h-5 w-5 text-gray-400 absolute left-3 top-3" />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="w-full pl-10 pr-3 sm:pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none"
-            >
-              {sortOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.icon} {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Sort options removed */}
         </div>
       </motion.div>
 
