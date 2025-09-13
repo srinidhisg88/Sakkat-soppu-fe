@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { EnvelopeIcon, PhoneIcon } from '@heroicons/react/24/outline';
 
 export default function Footer() {
   const legacyLogoUrl = new URL('../../logo.jpeg', import.meta.url).href;
@@ -46,26 +45,19 @@ export default function Footer() {
             </nav>
           </div>
 
-          {/* Support */}
+          {/* Support (plain text, links disabled) */}
           <div>
             <h4 className="text-gray-900 font-semibold mb-1 sm:mb-2">Support</h4>
             <ul className="space-y-1 text-sm">
               <li>
-                <a
-                  href="https://mail.google.com/mail/?view=cm&fs=1&to=sakkatsoppu@gmail.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 hover:text-green-700"
-                >
-                  <EnvelopeIcon className="h-4 w-4" />
-                  sakkatsoppu@gmail.com
-                </a>
+                <span className="inline-flex items-center gap-2 text-gray-700 select-text">
+                  Email: sakkatsoppu@gmail.com
+                </span>
               </li>
               <li>
-                <a href="tel:+919980761856" className="inline-flex items-center gap-2 hover:text-green-700">
-                  <PhoneIcon className="h-4 w-4" />
-                  +91 99807 61856
-                </a>
+                <span className="inline-flex items-center gap-2 text-gray-700 select-text">
+                  Phone: +91 99807 61856
+                </span>
               </li>
             </ul>
           </div>

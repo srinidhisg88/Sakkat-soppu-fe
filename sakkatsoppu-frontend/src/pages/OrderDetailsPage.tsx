@@ -26,6 +26,7 @@ export default function OrderDetailsPage() {
   discountAmount?: number;
   couponCode?: string;
   totalPrice?: number;
+  deliveryFee?: number;
     address?: string;
     latitude?: number;
     longitude?: number;
@@ -120,6 +121,12 @@ export default function OrderDetailsPage() {
                 You saved {Math.round((order.discountAmount! / order.subtotalPrice!) * 100)}% on this order.
               </p>
             )}
+          </div>
+        )}
+        {typeof order.deliveryFee === 'number' && (
+          <div className="flex justify-between">
+            <span className="text-gray-600">Delivery Fee</span>
+            <span className="font-medium">{order.deliveryFee === 0 ? 'Free' : `₹${order.deliveryFee}`}</span>
           </div>
         )}
         <div className="flex justify-between">

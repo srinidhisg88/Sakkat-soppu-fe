@@ -12,7 +12,7 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   const url = config.url || '';
-  const publicPrefixes = ['/products', '/admin/categories', '/farmers', '/coupons'];
+  const publicPrefixes = ['/products', '/admin/categories', '/farmers', '/coupons', '/public'];
   const isPublic = publicPrefixes.some((p) => url.startsWith(p));
   const isAuthRoute = url.startsWith('/auth/');
   if (token && !isPublic && !isAuthRoute) {
@@ -32,6 +32,8 @@ export const getFarmerProducts = (farmerId: string) => api.get(`/products/farmer
 export const getCategories = () => api.get('/admin/categories');
 export const getCoupons = (params?: { page?: number; limit?: number; search?: string }) => api.get('/public/coupons', { params });
 export const getPublicCoupons = (params?: { page?: number; limit?: number; search?: string }) => api.get('/coupons', { params });
+// Delivery settings (public)
+export const getPublicDeliverySettings = () => api.get('/public/settings/delivery');
 
 // Farmers (kept if backend supports)
 export const getFarmer = (id: string) => api.get(`/farmers/${id}`);
@@ -54,7 +56,20 @@ export const createOrder = (orderData: {
   paymentMode: 'COD';
   idempotencyKey: string;
   couponCode?: string;
-}) => api.post('/orders', orderData);
+}) => {
+  const payload: Record<string, unknown> = { ...orderData };
+  if (typeof orderData.couponCode === 'string' && orderData.couponCode.trim() !== '') {
+    const code = orderData.couponCode.trim();
+  payload.couponCode = code; // Send only couponCode, per backend contract
+  } else {
+    delete payload.couponCode;
+  }
+  if (import.meta.env && import.meta.env.DEV) {
+    // eslint-disable-next-line no-console
+    console.debug('POST /orders payload', payload);
+  }
+  return api.post('/orders', payload);
+};
 
 // Auth
 export const login = (email: string, password: string) => api.post('/auth/login', { email, password });

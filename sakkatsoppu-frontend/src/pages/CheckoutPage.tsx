@@ -3,7 +3,7 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { createOrder, getCoupons } from '../services/api';
+import { createOrder, getCoupons, getPublicDeliverySettings } from '../services/api';
 import { useLocation } from '../hooks/useLocation';
 // Drawer animations handled inside CouponDrawer
 import CouponDrawer from '../components/CouponDrawer';
@@ -33,6 +33,36 @@ export function CheckoutPage() {
     address: user?.address || '',
     latitude: user?.latitude || 0,
     longitude: user?.longitude || 0,
+  });
+
+  // Delivery settings
+  type DeliverySettings = {
+    enabled: boolean;
+    deliveryFee: number;
+    freeDeliveryThreshold: number;
+    minOrderSubtotal: number;
+    updatedAt?: string;
+  };
+  const { data: deliverySettings } = useQuery<DeliverySettings>({
+    queryKey: ['public', 'delivery-settings'],
+    queryFn: async () => {
+      try {
+        const res = await getPublicDeliverySettings();
+        const d = res.data as Partial<DeliverySettings> | undefined;
+        if (!d) throw new Error('No data');
+        return {
+          enabled: d.enabled ?? true,
+          deliveryFee: d.deliveryFee ?? 0,
+          freeDeliveryThreshold: d.freeDeliveryThreshold ?? 0,
+          minOrderSubtotal: d.minOrderSubtotal ?? 0,
+          updatedAt: d.updatedAt,
+        };
+      } catch {
+        // fallback and continue silently
+        return { enabled: true, deliveryFee: 0, freeDeliveryThreshold: 0, minOrderSubtotal: 0 } as DeliverySettings;
+      }
+    },
+    staleTime: 10 * 60_000,
   });
 
   // If user address becomes available later (e.g., after fetch), seed it once
@@ -86,6 +116,7 @@ export function CheckoutPage() {
     expiresAt?: string | null;
     isActive?: boolean;
   };
+  type RawCoupon = Partial<Coupon> & { couponCode?: string; description?: string | null };
 
   const { data: coupons = [] } = useQuery<Coupon[]>({
     queryKey: ['admin', 'coupons'],
@@ -94,11 +125,29 @@ export function CheckoutPage() {
         const res = await getCoupons({ page: 1, limit: 100 });
         console.log(res)
         const d: unknown = res.data;
-        if (Array.isArray(d)) return d as Coupon[];
-        if (d && typeof d === 'object' && Array.isArray((d as { data?: unknown[] }).data)) {
-          return ((d as { data?: unknown[] }).data || []) as Coupon[];
-        }
-        return [] as Coupon[];
+        let list: RawCoupon[] = [];
+        if (Array.isArray(d)) list = d as RawCoupon[];
+        else if (d && typeof d === 'object' && Array.isArray((d as { data?: unknown[] }).data)) list = ((d as { data?: unknown[] }).data || []) as RawCoupon[];
+        // Normalize: ensure `code` exists (fallback to couponCode)
+        const norm: Coupon[] = list
+          .map((c): Coupon | null => {
+            const code = ((c.code ?? c.couponCode ?? '') as string).toString().toUpperCase();
+            if (!code) return null;
+            const discountType = (c.discountType === 'percentage' || c.discountType === 'amount') ? c.discountType : 'amount';
+            const discountValue = typeof c.discountValue === 'number' ? c.discountValue : 0;
+            return {
+              code,
+              discountType,
+              discountValue,
+              minOrderValue: (c.minOrderValue ?? null) as number | null,
+              maxDiscount: (c.maxDiscount ?? null) as number | null,
+              startsAt: (c.startsAt ?? null) as string | null,
+              expiresAt: (c.expiresAt ?? null) as string | null,
+              isActive: c.isActive,
+            };
+          })
+          .filter((c): c is Coupon => !!c);
+        return norm;
       } catch (err: unknown) {
         // If forbidden or unauthenticated, treat as no coupons available
         const status = (err as { response?: { status?: number } })?.response?.status;
@@ -119,7 +168,22 @@ export function CheckoutPage() {
     return Math.floor(capped);
   }, [appliedCoupon, totalPrice]);
 
-  const finalAmount = Math.max(0, totalPrice - discountAmount);
+  const netSubtotal = Math.max(0, totalPrice - discountAmount);
+  const computedDeliveryFee = (() => {
+    const s = deliverySettings;
+    if (!s) return 0;
+    if (!s.enabled) return 0;
+    if (s.freeDeliveryThreshold > 0 && netSubtotal >= s.freeDeliveryThreshold) return 0;
+    return s.deliveryFee || 0;
+  })();
+  const finalAmount = Math.max(0, netSubtotal + computedDeliveryFee);
+  // Minimum order is checked on subtotal BEFORE coupon and EXCLUDING delivery fee
+  const belowMinBy = (() => {
+    const s = deliverySettings;
+    if (!s) return 0;
+    const min = s.minOrderSubtotal || 0;
+    return Math.max(0, min - totalPrice);
+  })();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,6 +192,10 @@ export function CheckoutPage() {
       setError('');
 
       // Try to create remote order; unauthenticated will use local fallback
+      if (import.meta.env && import.meta.env.DEV) {
+        // eslint-disable-next-line no-console
+        console.debug('Submitting order with couponCode:', appliedCoupon?.code?.trim() || undefined);
+      }
       let newOrderId: string | undefined;
   try {
         if (isAuthenticated) {
@@ -135,7 +203,7 @@ export function CheckoutPage() {
             ...formData,
             paymentMode: 'COD',
             idempotencyKey: (globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`),
-            couponCode: appliedCoupon?.code || undefined,
+            couponCode: appliedCoupon?.code?.trim() ? appliedCoupon.code.trim() : undefined,
           });
           const data = res.data || {};
           // Handle 201 structure with order object
@@ -153,7 +221,16 @@ export function CheckoutPage() {
           throw new Error('Unauthenticated - create local order');
         }
       } catch (err) {
-        // create local order fallback (for unauthenticated or hard API failure)
+        // If server responded with 4xx/5xx, surface message and stop
+  const axiosErr = err as { response?: { status?: number; data?: unknown } };
+  const status = axiosErr?.response?.status;
+  const data = axiosErr?.response?.data as { message?: string; error?: string } | undefined;
+  const msg = data?.message || data?.error || undefined;
+        if (status && status >= 400) {
+          setError(msg || 'Failed to place order. Please check coupon code and details.');
+          throw err;
+        }
+        // create local order fallback (for unauthenticated or network failure)
         const localOrdersRaw = localStorage.getItem('sakkat_orders');
         const localOrders = localOrdersRaw ? JSON.parse(localOrdersRaw) : [];
         const id = `local_${Date.now()}`;
@@ -186,7 +263,7 @@ export function CheckoutPage() {
     } catch (err) {
       setError('Failed to place order. Please try again.');
     } finally {
-      setLoading(false);
+  setLoading(false);
     }
   };
 
@@ -238,12 +315,19 @@ export function CheckoutPage() {
               )}
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Delivery Fee</span>
-                <span>Free</span>
+                <span>{computedDeliveryFee === 0 ? 'Free' : `₹${computedDeliveryFee}`}</span>
               </div>
               <div className="flex justify-between text-base">
                 <span className="font-semibold">Payable</span>
                 <span className="font-bold">₹{finalAmount}</span>
               </div>
+              {deliverySettings && deliverySettings.enabled && (
+                <div className="text-xs text-gray-600">
+                  {deliverySettings.freeDeliveryThreshold > 0 && netSubtotal < deliverySettings.freeDeliveryThreshold ? (
+                    <p>Free delivery over ₹{deliverySettings.freeDeliveryThreshold}</p>
+                  ) : null}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -316,12 +400,16 @@ export function CheckoutPage() {
               </div>
             </div>
 
+            {belowMinBy > 0 && (
+              <p className="text-sm text-amber-700">Add ₹{belowMinBy} more to reach minimum order value.</p>
+            )}
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || belowMinBy > 0}
               className={`w-full py-3 rounded-lg font-semibold ${
-                loading
-                  ? 'bg-gray-400 cursor-not-allowed'
+                loading || belowMinBy > 0
+                  ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
                   : 'bg-green-600 hover:bg-green-700 text-white'
               }`}
             >

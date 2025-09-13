@@ -1,5 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useQuery } from '@tanstack/react-query';
+import { getPublicDeliverySettings } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { EmptyState } from '../components/EmptyState';
 // import { useAuth } from '../context/AuthContext';
@@ -9,6 +11,41 @@ export function CartPage() {
   // const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { show } = useToast();
+  // Public delivery settings
+  type DeliverySettings = {
+    enabled: boolean;
+    deliveryFee: number;
+    freeDeliveryThreshold: number;
+    minOrderSubtotal: number;
+  };
+  const { data: deliverySettings, isLoading: settingsLoading } = useQuery<DeliverySettings>({
+    queryKey: ['public', 'delivery-settings'],
+    queryFn: async () => {
+      try {
+        const res = await getPublicDeliverySettings();
+        const d = res.data as Partial<DeliverySettings> | undefined;
+        if (!d) throw new Error('No data');
+        return {
+          enabled: d.enabled ?? true,
+          deliveryFee: d.deliveryFee ?? 0,
+          freeDeliveryThreshold: d.freeDeliveryThreshold ?? 0,
+          minOrderSubtotal: d.minOrderSubtotal ?? 0,
+        };
+      } catch {
+        return { enabled: true, deliveryFee: 0, freeDeliveryThreshold: 0, minOrderSubtotal: 0 } as DeliverySettings;
+      }
+    },
+    staleTime: 10 * 60_000,
+  });
+
+  // Minimum order gating for Checkout: BEFORE coupon (no coupon here) and EXCLUDING delivery fee
+  const belowMinBy = (() => {
+    const s = deliverySettings;
+    if (!s || !s.enabled) return 0;
+    const min = s.minOrderSubtotal ?? 0;
+    return Math.max(0, min - totalPrice);
+  })();
+  const disableCheckout = !settingsLoading && !!deliverySettings && deliverySettings.enabled && belowMinBy > 0;
 
   // Guests can view local cart; encourage login during checkout
 
@@ -129,20 +166,49 @@ export function CartPage() {
                 <span>Subtotal</span>
                 <span>₹{totalPrice}</span>
               </div>
-              <div className="flex justify-between">
-                <span>Delivery Fee</span>
-                <span>Free</span>
-              </div>
+              {settingsLoading ? (
+                <div className="flex justify-between text-sm text-gray-700">
+                  <span>Delivery Fee</span>
+                  <span className="inline-block h-4 w-12 bg-gray-200 rounded animate-pulse" />
+                </div>
+              ) : deliverySettings && deliverySettings.enabled ? (
+                <div className="flex justify-between text-sm text-gray-700">
+                  <span>Delivery Fee</span>
+                  <span>
+                    {deliverySettings.freeDeliveryThreshold > 0 && totalPrice >= deliverySettings.freeDeliveryThreshold
+                      ? 'Free'
+                      : (deliverySettings.deliveryFee > 0 ? `₹${deliverySettings.deliveryFee}` : 'Free')}
+                  </span>
+                </div>
+              ) : null}
               <div className="border-t pt-2 mt-2">
                 <div className="flex justify-between font-bold">
                   <span>Total</span>
-                  <span>₹{totalPrice}</span>
+                  {settingsLoading ? (
+                    <span className="inline-block h-5 w-16 bg-gray-200 rounded animate-pulse" />
+                  ) : (
+                    <span>
+                      ₹{(deliverySettings && deliverySettings.enabled
+                        ? (deliverySettings.freeDeliveryThreshold > 0 && totalPrice >= deliverySettings.freeDeliveryThreshold
+                            ? totalPrice
+                            : totalPrice + (deliverySettings.deliveryFee || 0))
+                        : totalPrice)}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
+            {!settingsLoading && deliverySettings && deliverySettings.enabled && deliverySettings.freeDeliveryThreshold > 0 && totalPrice < deliverySettings.freeDeliveryThreshold && (
+              <p className="text-xs text-gray-600">Free delivery over ₹{deliverySettings.freeDeliveryThreshold}</p>
+            )}
+            {!settingsLoading && disableCheckout && (
+              <p className="text-xs text-amber-700 mt-1">Add ₹{belowMinBy} more to reach minimum order value.</p>
+            )}
             <button
-              onClick={() => navigate('/checkout')}
-              className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700"
+              onClick={() => { if (!disableCheckout) navigate('/checkout'); }}
+              disabled={disableCheckout}
+              aria-disabled={disableCheckout}
+              className={`w-full py-3 rounded-lg font-semibold ${disableCheckout ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
             >
               Proceed to Checkout
             </button>

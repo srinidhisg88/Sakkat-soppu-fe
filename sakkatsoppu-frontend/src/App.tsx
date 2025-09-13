@@ -23,6 +23,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import { ToastProvider } from './components/ToastProvider';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
+import { AddToCartBarProvider } from './components/AddToCartBarProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,6 +43,7 @@ function App() {
         <CartProvider>
           <ToastProvider>
           <Router>
+            <AddToCartBarProvider>
             <div className="min-h-screen bg-cream-100 relative">
               {/* Always render app; splash overlays with a circular reveal */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
@@ -116,6 +118,7 @@ function App() {
                 <SplashScreen duration={1200} onFinish={() => setSplashDone(true)} />
               )}
             </div>
+            </AddToCartBarProvider>
           </Router>
           </ToastProvider>
         </CartProvider>

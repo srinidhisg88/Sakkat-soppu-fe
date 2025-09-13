@@ -58,6 +58,7 @@ export interface Order {
   subtotalPrice?: number;
   discountAmount?: number;
   couponCode?: string;
+  deliveryFee?: number;
   status: 'pending' | 'confirmed' | 'delivered' | 'cancelled';
   paymentMode: 'COD';
   address: string;

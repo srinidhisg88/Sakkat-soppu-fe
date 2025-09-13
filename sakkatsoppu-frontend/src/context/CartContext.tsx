@@ -23,24 +23,41 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const { isAuthenticated } = useAuth();
 
-  type RemoteRow = { productId: Product | string; quantity: number };
-  const mapRemoteCart = useMemo(() => (rows: RemoteRow[]) =>
-    rows.map((row) => {
-      if (typeof row.productId === 'string') {
-        return {
-          productId: row.productId,
-          quantity: row.quantity,
-          product: {
-            _id: row.productId,
-            name: 'Product',
-            price: 0,
-            stock: 0,
-          } as Product,
-        } as CartContextType['items'][number];
+  type RemoteRow = { productId: Product | { _id?: string } | string | null | undefined; quantity: number };
+  const hasId = (v: unknown): v is { _id: string } => {
+    return !!v && typeof v === 'object' && typeof (v as { _id?: unknown })._id === 'string';
+  };
+  const mapRemoteCart = useMemo(() => (rows: RemoteRow[]) => {
+    const result: (CartItem & { product: Product })[] = [];
+    for (const row of rows || []) {
+      const pidVal = row?.productId as unknown;
+      let pid: string | null = null;
+      let productObj: Partial<Product> | null = null;
+
+      if (typeof pidVal === 'string' && pidVal) {
+        pid = pidVal;
+      } else if (hasId(pidVal)) {
+        pid = pidVal._id as string;
+        productObj = pidVal as unknown as Product;
       }
-      const prod = row.productId as unknown as Product;
-      return { productId: prod._id, quantity: row.quantity, product: prod } as CartContextType['items'][number];
-    }), []);
+
+      if (!pid) {
+        // Skip invalid rows silently; backend may return null product references
+        // console.warn('Skipping cart row with invalid productId', row);
+        continue;
+      }
+
+      const product: Product = (productObj as Product) ?? {
+        _id: pid,
+        name: 'Product',
+        price: 0,
+        stock: 0,
+      } as Product;
+
+      result.push({ productId: pid, quantity: row.quantity ?? 0, product });
+    }
+    return result;
+  }, []);
 
   const fetchCart = useCallback(async () => {
     // If user is authenticated, try fetching remote cart; otherwise load from localStorage

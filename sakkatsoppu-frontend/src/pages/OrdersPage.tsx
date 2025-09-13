@@ -31,6 +31,10 @@ export function OrdersPage() {
     items?: Array<{ productId: string; quantity: number; price?: number }>;
     createdAt?: string;
     totalPrice?: number;
+  subtotalPrice?: number;
+  discountAmount?: number;
+  couponCode?: string;
+  deliveryFee?: number;
   };
 
   const { data: orders = [], isLoading } = useQuery<OrderLike[]>({
@@ -165,7 +169,7 @@ export function OrdersPage() {
               </span>
             </div>
 
-    <div className="border-t border-b py-3 mb-3">
+  <div className="border-t border-b py-3 mb-3">
               {(order.items || []).map((item) => (
                 <div
                   key={item.productId}
@@ -198,8 +202,29 @@ export function OrdersPage() {
                 </div>
               ))}
             </div>
+            {/* Pricing breakdown in the middle section */}
+            <div className="mt-2 space-y-1 text-sm">
+              {typeof order.subtotalPrice === 'number' && (
+                <div className="flex justify-between text-gray-700">
+                  <span>Subtotal</span>
+                  <span>₹{order.subtotalPrice}</span>
+                </div>
+              )}
+              {order.couponCode && typeof order.discountAmount === 'number' && order.discountAmount > 0 && (
+                <div className="flex justify-between text-green-700">
+                  <span>Coupon ({order.couponCode})</span>
+                  <span>-₹{order.discountAmount}</span>
+                </div>
+              )}
+              {typeof order.deliveryFee === 'number' && (
+                <div className="flex justify-between text-gray-700">
+                  <span>Delivery Fee</span>
+                  <span>{order.deliveryFee === 0 ? 'Free' : `₹${order.deliveryFee}`}</span>
+                </div>
+              )}
+            </div>
 
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center mt-3">
               <div>
                 <p className="text-xs text-gray-600">Delivery Address</p>
                 <p className="mt-0.5 text-sm">{order.address}</p>
@@ -210,20 +235,6 @@ export function OrdersPage() {
               </div>
             </div>
 
-            {order.couponCode && typeof order.discountAmount === 'number' && order.discountAmount > 0 && (
-              <div className="mt-2 flex justify-between items-center bg-green-50 rounded-md px-3 py-2">
-                <p className="text-xs text-green-800">
-                  Coupon <span className="font-semibold">{order.couponCode}</span> applied
-                  {typeof order.subtotalPrice === 'number' && order.subtotalPrice > 0
-                    ? (() => {
-                        const pct = Math.round((order.discountAmount! / order.subtotalPrice!) * 100);
-                        return ` • Saved ${pct}%`;
-                      })()
-                    : ''}
-                </p>
-                <p className="text-sm font-medium text-green-700">-₹{order.discountAmount}</p>
-              </div>
-            )}
           </div>
         ))}
       </div>

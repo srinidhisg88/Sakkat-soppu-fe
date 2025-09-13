@@ -6,6 +6,7 @@ import { useCart } from '../context/CartContext';
 import { ShoppingCartIcon, SparklesIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
+import { useAddToCartBar } from '../hooks/useAddToCartBar';
 
 interface ProductCardProps {
   product: Product;
@@ -17,6 +18,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const navigate = useNavigate();
   const location = useRouterLocation();
   const { show } = useToast();
+  const { showBar } = useAddToCartBar();
   const [qty, setQty] = useState(1);
 
   const handleAddToCart = async (e: React.MouseEvent) => {
@@ -36,8 +38,9 @@ export function ProductCard({ product }: ProductCardProps) {
       if (desired < qty) {
         show(`Only ${remaining} remaining. Adding ${desired}.`, { type: 'warning' });
       }
-      await addToCart(product._id, desired);
-      show('Added to cart', { type: 'success' });
+  await addToCart(product._id, desired);
+  // Count distinct products (not quantity)
+  showBar(1);
     } catch (error) {
       console.error('Error adding to cart:', error);
       show('Failed to add to cart', { type: 'error' });
@@ -81,7 +84,7 @@ export function ProductCard({ product }: ProductCardProps) {
       return;
     }
     try {
-      await updateQuantity(product._id, next);
+  await updateQuantity(product._id, next);
     } catch {
       show('Failed to update quantity', { type: 'error' });
     }

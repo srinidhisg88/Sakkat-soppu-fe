@@ -12,8 +12,6 @@ import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
-  EnvelopeIcon,
-  PhoneIcon,
 } from '@heroicons/react/24/outline';
 
 export function Navbar() {
@@ -122,29 +120,7 @@ export function Navbar() {
               </Link>
             </motion.div>
 
-            {/* Support: Email and Phone */}
-            <motion.a
-              variants={navItemVariants}
-              whileHover="hover"
-              href="https://mail.google.com/mail/?view=cm&fs=1&to=sakkatsoppu@gmail.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Email support"
-              className="py-2 px-3 rounded-lg hover:bg-green-50 flex items-center"
-              title="Email support"
-            >
-              <EnvelopeIcon className="h-5 w-5 text-green-600" />
-            </motion.a>
-            <motion.a
-              variants={navItemVariants}
-              whileHover="hover"
-              href="tel:+919980761856"
-              aria-label="Call support"
-              className="py-2 px-3 rounded-lg hover:bg-green-50 flex items-center"
-              title="Call support"
-            >
-              <PhoneIcon className="h-5 w-5 text-green-600" />
-            </motion.a>
+            {/* Support removed from navbar per requirement */}
 
             {isAuthenticated ? (
               <>
@@ -227,14 +203,7 @@ export function Navbar() {
                 <ClipboardDocumentListIcon className="h-5 w-5 text-green-600" />
                 <span>Orders</span>
               </Link>
-              <a onClick={() => setMobileOpen(false)} href="https://mail.google.com/mail/?view=cm&fs=1&to=sakkatsoppu@gmail.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-green-50">
-                <EnvelopeIcon className="h-5 w-5 text-green-600" />
-                <span>Email support</span>
-              </a>
-              <a onClick={() => setMobileOpen(false)} href="tel:+919980761856" className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-green-50">
-                <PhoneIcon className="h-5 w-5 text-green-600" />
-                <span>Call support</span>
-              </a>
+              {/* Support removed from mobile menu per requirement */}
               <Link onClick={() => setMobileOpen(false)} to="/cart" className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-green-50">
                 <div className="relative">
                   <ShoppingCartIcon className="h-5 w-5 text-green-600" />

@@ -6,6 +6,7 @@ import { getProduct, getFarmer, getCategories } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
+import { useAddToCartBar } from '../hooks/useAddToCartBar';
 
 export function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +14,7 @@ export function ProductDetailsPage() {
   const { addToCart, updateQuantity, items } = useCart();
   const { isAuthenticated } = useAuth();
   const { show } = useToast();
+  const { showBar } = useAddToCartBar();
   const navigate = useNavigate();
   const location = useRouterLocation();
 
@@ -61,8 +63,9 @@ export function ProductDetailsPage() {
       if (reqQty < quantity) {
         show(`Only ${remaining} more pack(s) available. Added ${reqQty}.`, { type: 'warning' });
       }
-      await addToCart(product._id, reqQty);
-      show('Added to cart', { type: 'success' });
+  await addToCart(product._id, reqQty);
+  // Count distinct products (not quantity)
+  showBar(1);
     } catch (error) {
       console.error('Error adding to cart:', error);
       show('Failed to add to cart', { type: 'error' });
