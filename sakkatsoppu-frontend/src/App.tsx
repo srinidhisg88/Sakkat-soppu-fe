@@ -21,6 +21,8 @@ import { SignupPage } from './pages/SignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import { ToastProvider } from './components/ToastProvider';
+import Footer from './components/Footer';
+import ScrollToTop from './components/ScrollToTop';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,6 +45,7 @@ function App() {
             <div className="min-h-screen bg-cream-100 relative">
               {/* Always render app; splash overlays with a circular reveal */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+                <ScrollToTop />
                 <Navbar />
                 <main className="container mx-auto px-4 py-8">
                   <Routes>
@@ -106,6 +109,7 @@ function App() {
                     />
                   </Routes>
                 </main>
+                <Footer />
               </motion.div>
 
               {!splashDone && (
