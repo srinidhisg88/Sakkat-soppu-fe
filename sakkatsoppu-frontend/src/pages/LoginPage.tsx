@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-const authLogo = '/logo_final.jpg';
+// Resolve logo via bundler so it’s included in the build
+const authLogo = new URL('../../logo_final.jpg', import.meta.url).href;
 import {
   EnvelopeIcon,
   LockClosedIcon,
