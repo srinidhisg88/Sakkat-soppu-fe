@@ -27,7 +27,7 @@ export function ProductCard({ product }: ProductCardProps) {
       navigate('/login', { state: { from: location.pathname + location.search } });
       return;
     }
-    try {
+  try {
       const existingQty = items.find(i => i.productId === product._id)?.quantity || 0;
       const remaining = Math.max(0, (product.stock || 0) - existingQty);
       if (remaining <= 0) {
@@ -107,14 +107,14 @@ export function ProductCard({ product }: ProductCardProps) {
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ scale: 1.02 }}
       transition={{ duration: 0.3 }}
-  className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 h-full"
+      className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 h-full"
     >
       <Link to={`/products/${product._id}`} className="h-full flex flex-col">
         <div className="relative w-full" style={{ aspectRatio: '4 / 3' }}>
           <motion.img
             src={product.imageUrl || (product.images && product.images[0]) || '/placeholder.png'}
             alt={product.name}
-            className="absolute inset-0 w-full h-full object-cover"
+                className="absolute inset-0 w-full h-full object-cover"
             whileHover={{ scale: 1.03 }}
             transition={{ duration: 0.3 }}
           />
@@ -131,14 +131,14 @@ export function ProductCard({ product }: ProductCardProps) {
         </div>
         
         <div className="p-3 sm:p-4 flex-1 flex flex-col">
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-1.5 sm:mb-2 hover:text-green-600 transition-colors line-clamp-2">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1.5 sm:mb-2 hover:text-green-600 transition-colors line-clamp-2 min-h-[42px] sm:min-h-[48px]">
             {product.name}
           </h3>
-          <p className="text-xs sm:text-sm text-gray-600 mb-2 sm:mb-3 line-clamp-1">{product.category}</p>
+          <p className="text-[11px] sm:text-xs text-gray-600 mb-2 sm:mb-2.5 line-clamp-1 min-h-[14px] sm:min-h-[16px]">{product.category}</p>
           
     <div className="flex items-center justify-between mb-4 gap-2">
             <div>
-              <span className="text-xl sm:text-2xl font-bold text-green-600">₹{product.price}</span>
+              <span className="text-lg sm:text-xl font-bold text-green-600">₹{product.price}</span>
               {(() => {
                 const unitLabel = product.unitLabel || (typeof product.g === 'number' && product.g > 0
                   ? `${product.g} g`
@@ -146,7 +146,7 @@ export function ProductCard({ product }: ProductCardProps) {
                   ? `${product.pieces} piece${product.pieces === 1 ? '' : 's'}`
                   : undefined);
                 return unitLabel ? (
-  <span className="text-xs sm:text-sm text-gray-500 ml-1 truncate">for {unitLabel}</span>
+                  <span className="text-[11px] sm:text-xs text-gray-500 ml-1 truncate">for {unitLabel}</span>
                 ) : null;
               })()}
             </div>
@@ -208,7 +208,7 @@ export function ProductCard({ product }: ProductCardProps) {
               </div>
             </div>
           ) : (
-            <div className="mt-auto flex items-center gap-2 sm:gap-3">
+            <div className="mt-2 flex items-center gap-2 sm:gap-3 min-w-0">
               {remaining > 0 && (
                 <div className="flex items-center border rounded overflow-hidden">
                   <button
@@ -233,15 +233,15 @@ export function ProductCard({ product }: ProductCardProps) {
                 disabled={remaining <= 0}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
-                className={`flex-1 py-2.5 sm:py-3 px-3 sm:px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2 transition-all duration-300
+                className={`flex-1 min-w-0 overflow-hidden py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg text-white font-medium flex items-center justify-center gap-1.5 sm:gap-2 transition-all duration-300 text-sm sm:text-base leading-5
                   ${
                     remaining > 0
                       ? 'bg-green-600 hover:bg-green-700 shadow-md hover:shadow-lg'
                       : 'bg-gray-400 cursor-not-allowed'
                   }`}
               >
-                <ShoppingCartIcon className="h-5 w-5" />
-                {remaining > 0 ? 'Add to Cart' : 'Out of Stock'}
+                <ShoppingCartIcon className="h-5 w-5 flex-shrink-0" />
+                <span className="truncate">{remaining > 0 ? 'Add' : 'Out of Stock'}</span>
               </motion.button>
             </div>
           )}

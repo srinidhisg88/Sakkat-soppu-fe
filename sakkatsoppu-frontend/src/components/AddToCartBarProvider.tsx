@@ -31,13 +31,10 @@ type DeliverySettings = {
 export function AddToCartBarProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { totalPrice } = useCart();
+  const { totalPrice, items } = useCart();
   const [open, setOpen] = useState(false);
-  const [count, setCount] = useState(1);
+  const [count, setCount] = useState(0);
   const timerRef = useRef<number | null>(null);
-  const lastCountRef = useRef(0);
-  const reappearUntilRef = useRef<number>(0);
-  const lastReopenAtRef = useRef<number>(0);
 
   // Fetch coupons (public/admin hybrid already handled in api.getCoupons path)
   const { data: coupons = [] } = useQuery<Coupon[]>({
@@ -45,12 +42,29 @@ export function AddToCartBarProvider({ children }: { children: React.ReactNode }
     queryFn: async () => {
       try {
         const res = await getCoupons({ page: 1, limit: 100 });
-        const d: unknown = res.data;
-        if (Array.isArray(d)) return d as Coupon[];
-        if (d && typeof d === 'object' && Array.isArray((d as { data?: unknown[] }).data)) {
-          return ((d as { data?: unknown[] }).data || []) as Coupon[];
-        }
-        return [] as Coupon[];
+        const d = res.data as unknown;
+        const arr = (Array.isArray(d)
+          ? d
+          : (d as { data?: unknown[]; coupons?: unknown[]; items?: unknown[]; results?: unknown[] })?.data
+          || (d as { coupons?: unknown[] }).coupons
+          || (d as { items?: unknown[] }).items
+          || (d as { results?: unknown[] }).results
+          || []) as unknown[];
+        const list: Coupon[] = arr.map((raw) => {
+          const c = raw as Record<string, unknown>;
+          const code = ((c?.code as string) || (c?.couponCode as string) || '').toString();
+          return {
+            code,
+            discountType: ((c?.discountType as string) === 'percentage' ? 'percentage' : 'amount') as 'percentage' | 'amount',
+            discountValue: Number((c?.discountValue as number | undefined) ?? (c?.value as number | undefined) ?? 0),
+            minOrderValue: c?.minOrderValue != null ? Number(c.minOrderValue as number) : undefined,
+            maxDiscount: c?.maxDiscount != null ? Number(c.maxDiscount as number) : undefined,
+            isActive: (c?.isActive as boolean | undefined) !== false,
+            startsAt: (c?.startsAt as string | undefined) ?? null,
+            expiresAt: (c?.expiresAt as string | undefined) ?? null,
+          } as Coupon;
+        });
+        return list.filter((c) => c.code);
       } catch {
         return [] as Coupon[];
       }
@@ -79,7 +93,7 @@ export function AddToCartBarProvider({ children }: { children: React.ReactNode }
     staleTime: 10 * 60_000,
   });
 
-  const hint = useMemo(() => {
+  const hints = useMemo(() => {
     const hints: string[] = [];
     // Minimum order
     if (deliverySettings && deliverySettings.enabled) {
@@ -104,59 +118,53 @@ export function AddToCartBarProvider({ children }: { children: React.ReactNode }
       }
       if (best && best.savings > 0) hints.push(`Use ${best.code} to save ₹${best.savings}`);
     }
-    return hints.join(' • ');
+  return hints;
   }, [coupons, deliverySettings, totalPrice]);
 
-  const showBar = useCallback((addedCount: number) => {
-    const now = Date.now();
-    const withinWindow = now < reappearUntilRef.current || open; // accumulate when visible or within reappear window
-    const base = withinWindow ? lastCountRef.current : 0;
-    const nextCount = Math.max(0, base) + Math.max(0, addedCount);
-    lastCountRef.current = nextCount;
-    reappearUntilRef.current = now + 60_000; // allow scroll re-open for 60s
-    setCount(nextCount);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const showBar = useCallback((_addedCount: number) => {
+    // Just ensure the bar is visible; count is derived from cart items
     setOpen(true);
-    if (timerRef.current) window.clearTimeout(timerRef.current);
-    timerRef.current = window.setTimeout(() => setOpen(false), 3000);
-  }, [open]);
+  }, []);
 
   useEffect(() => () => { if (timerRef.current) window.clearTimeout(timerRef.current); }, []);
 
-  // Re-open the bar briefly if user scrolls within a short window after an add
+  // Disable auto re-open on scroll; we keep the bar visible while the cart has items
   useEffect(() => {
-    const onScroll = () => {
-      const now = Date.now();
-      if (open) return; // already visible
-      if (now > reappearUntilRef.current) return; // window elapsed
-      // throttle reopens to avoid spam
-      if (now - lastReopenAtRef.current < 1200) return;
-      lastReopenAtRef.current = now;
-      if (lastCountRef.current > 0) {
-        setCount(lastCountRef.current);
-        setOpen(true);
-        if (timerRef.current) window.clearTimeout(timerRef.current);
-        timerRef.current = window.setTimeout(() => setOpen(false), 3000);
-      }
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [open]);
+    const noop = () => {};
+    window.addEventListener('scroll', noop, { passive: true });
+    return () => window.removeEventListener('scroll', noop);
+  }, []);
 
   // If we navigate to the cart page (e.g., by pressing View Cart), hide and prevent re-open
   useEffect(() => {
     if (location.pathname === '/cart') {
       if (timerRef.current) window.clearTimeout(timerRef.current);
       setOpen(false);
-      reappearUntilRef.current = 0;
     }
   }, [location.pathname]);
+
+  // Hide and prevent re-open if cart becomes empty (e.g., decremented from product card)
+  useEffect(() => {
+    if (!items || items.length === 0) {
+      if (timerRef.current) window.clearTimeout(timerRef.current);
+      setOpen(false);
+      setCount(0);
+    }
+  }, [items]);
+
+  // Keep the bar visible while there are items; update count to number of items
+  useEffect(() => {
+    const c = Array.isArray(items) ? items.length : 0;
+    setCount(c);
+    if (c > 0 && location.pathname !== '/cart') setOpen(true);
+  }, [items, location.pathname]);
 
   const value = useMemo<Ctx>(() => ({ showBar }), [showBar]);
 
   const handleViewCart = useCallback(() => {
     if (timerRef.current) window.clearTimeout(timerRef.current);
     setOpen(false);
-    reappearUntilRef.current = 0; // disable re-open on scroll after explicit view
     navigate('/cart');
   }, [navigate]);
 
@@ -175,18 +183,16 @@ export function AddToCartBarProvider({ children }: { children: React.ReactNode }
             <div className="mx-auto w-full max-w-xl">
               <div className="rounded-xl shadow-lg bg-green-600 text-white flex items-center justify-between gap-3 px-4 py-3 sm:py-3.5">
                 <div className="min-w-0">
-                  <p className="font-semibold text-sm sm:text-base truncate">{count} product{count !== 1 ? 's' : ''} added</p>
-                  {hint && (
-                    <p className="text-[11px] sm:text-xs text-white/90 truncate">{hint}</p>
+                  <p className="font-semibold text-sm sm:text-base truncate">{count} product{count !== 1 ? 's' : ''} in cart</p>
+                  {hints.length > 0 && (
+                    <div className="text-[11px] sm:text-xs text-white/90 space-y-0.5">
+                      {hints.slice(0, 2).map((h, i) => (
+                        <p key={i} className="truncate">{h}</p>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setOpen(false)}
-                    className="hidden sm:inline-flex px-3 py-2 rounded-lg bg-white/15 hover:bg-white/20 text-white text-sm"
-                  >
-                    Hide
-                  </button>
                   <button
                     onClick={handleViewCart}
                     className="px-3 sm:px-4 py-2 rounded-lg bg-white text-green-700 font-semibold text-sm sm:text-base"

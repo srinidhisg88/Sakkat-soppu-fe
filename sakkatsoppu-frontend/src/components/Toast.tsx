@@ -1,21 +1,11 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import type { Toast, ToastContextValue } from './Toast.types';
+import { ToastContext } from './ToastContext';
 
 // Tiny toast system: useToast().show(message, { type })
 // Renders small bottom-center toasts. No external deps.
 
-type ToastType = 'info' | 'success' | 'warning' | 'error';
-
-type Toast = {
-  id: string;
-  message: string;
-  type: ToastType;
-};
-
-type ToastContextValue = {
-  show: (message: string, opts?: { type?: ToastType; durationMs?: number }) => void;
-};
-
-const ToastContext = createContext<ToastContextValue | undefined>(undefined);
+// Context is defined in a separate file to comply with fast-refresh rules
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -36,7 +26,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const show = useCallback<ToastContextValue['show']>((message, opts) => {
+  const show = useCallback<ToastContextValue['show']>((message: string, opts?: { type?: 'info' | 'success' | 'warning' | 'error'; durationMs?: number }) => {
     const id = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
     const toast: Toast = { id, message, type: opts?.type ?? 'info' };
     setToasts((prev) => [...prev, toast]);
@@ -71,8 +61,4 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useToast() {
-  const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useToast must be used within a ToastProvider');
-  return ctx;
-}
+// Hook is exported from a separate file to satisfy fast-refresh rule

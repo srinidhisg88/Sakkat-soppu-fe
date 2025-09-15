@@ -192,10 +192,7 @@ export function CheckoutPage() {
       setError('');
 
       // Try to create remote order; unauthenticated will use local fallback
-      if (import.meta.env && import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
-        console.debug('Submitting order with couponCode:', appliedCoupon?.code?.trim() || undefined);
-      }
+  // Dev note: submitting order with couponCode (debug log removed to satisfy lint)
       let newOrderId: string | undefined;
   try {
         if (isAuthenticated) {

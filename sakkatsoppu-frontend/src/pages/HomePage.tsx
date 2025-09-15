@@ -214,10 +214,10 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6"
           >
             {effectiveProducts.map(product => (
-              <motion.div key={product._id} variants={itemVariants}>
+              <motion.div key={product._id} variants={itemVariants} className="h-full">
                 <ProductCard product={product} />
               </motion.div>
             ))}

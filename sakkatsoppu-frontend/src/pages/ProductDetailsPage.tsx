@@ -397,7 +397,7 @@ export function ProductDetailsPage() {
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                {remaining > 0 ? 'Add to Cart' : 'Out of Stock'}
+                {remaining > 0 ? 'Add' : 'Out of Stock'}
               </button>
             </>
           )}

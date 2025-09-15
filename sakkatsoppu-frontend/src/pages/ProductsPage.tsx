@@ -1,15 +1,14 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { Product, Category } from '../types';
-import { getProducts, getCategories } from '../services/api';
+import { getCategories, getProducts } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
 import { EmptyState } from '../components/EmptyState';
-import {
-  MagnifyingGlassIcon,
-  FunnelIcon,
-} from '@heroicons/react/24/outline';
+import Pagination from '../components/Pagination';
+import { MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 // Categories are derived from API data (no hardcoded list)
 
@@ -29,37 +28,94 @@ const containerVariants = {
 export function ProductsPage() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const { data: products = [], isLoading, isError, refetch } = useQuery<Product[]>({
-    queryKey: ['products', 'list'],
+  // URL state: page & limit
+  const params = new URLSearchParams(location.search);
+  const initialPage = Math.max(1, Number(params.get('page') || 1));
+  const initialLimit = Math.max(1, Number(params.get('limit') || 24));
+  const [page, setPage] = useState<number>(initialPage);
+  const limit = initialLimit; // fixed page size across devices
+
+  // Debounce search to avoid excessive requests
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 350);
+    return () => clearTimeout(id);
+  }, [searchQuery]);
+
+  // When search changes, start from page 1
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  // Keep URL in sync
+  useEffect(() => {
+    const p = new URLSearchParams(location.search);
+    p.set('page', String(page));
+    p.set('limit', String(limit));
+    navigate({ pathname: location.pathname, search: p.toString() }, { replace: true });
+  }, [page, limit, location.pathname, location.search, navigate]);
+
+  type ProductsEnvelope = { products: Product[]; total: number; page: number; totalPages: number };
+  const { data, isLoading, isError, refetch, isFetching } = useQuery<ProductsEnvelope>({
+    queryKey: ['products', { page, limit, search: debouncedSearch || undefined }],
     queryFn: async () => {
-      const res = await getProducts({ page: 1, limit: 50 });
-      const unwrap = (val: unknown): Product[] => {
-        if (Array.isArray(val)) return val as Product[];
-        if (val && typeof val === 'object') {
-          const obj = val as Record<string, unknown>;
-          const keys = ['data', 'products', 'items', 'results', 'payload'];
-          for (const k of keys) {
-            if (k in obj) {
-              const nested = unwrap(obj[k]);
-              if (Array.isArray(nested)) return nested as Product[];
-            }
-          }
-          const firstArray = Object.values(obj).find(Array.isArray);
-          if (firstArray) return unwrap(firstArray);
-        }
-        return [] as Product[];
-      };
-      return unwrap(res.data);
+      const res = await getProducts({ page, limit, search: debouncedSearch || undefined });
+      // Backend contract: { products, total, page, totalPages }
+      return res.data as ProductsEnvelope;
     },
+    keepPreviousData: true,
     retry: (failureCount, error: unknown) => {
       const status = (error as AxiosError)?.response?.status;
-      if (status === 429) return failureCount < 1; // retry once on rate limit
+      if (status === 429) return failureCount < 1; // retry once
       return failureCount < 2;
     },
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
     refetchOnMount: false,
   });
+
+  const products: Product[] = data?.products ?? [];
+
+  // Client-side full-catalog fetch for search-only mode
+  const ALL_FETCH_LIMIT = 100; // batch size used only for all-pages retrieval
+  const allEnabled = debouncedSearch.length > 0;
+  const [allCatalog, setAllCatalog] = useState<Product[] | null>(null);
+  const [allLoading, setAllLoading] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    async function loadAll() {
+      if (!allEnabled) {
+        setAllCatalog(null);
+        return;
+      }
+      setAllLoading(true);
+      try {
+        const first = (await getProducts({ page: 1, limit: ALL_FETCH_LIMIT })).data as ProductsEnvelope;
+        const totalPagesAll = Math.max(1, first.totalPages);
+        if (totalPagesAll <= 1) {
+          if (!cancelled) setAllCatalog(first.products);
+        } else {
+          const results: Product[][] = [first.products];
+          for (let p = 2; p <= totalPagesAll; p++) {
+            const r = (await getProducts({ page: p, limit: ALL_FETCH_LIMIT })).data as ProductsEnvelope;
+            results.push(r.products);
+          }
+          if (!cancelled) setAllCatalog(results.flat());
+        }
+      } catch (e) {
+        // Failed to fetch full catalog for client-side search; proceed without all-catalog
+        if (!cancelled) setAllCatalog([]);
+      } finally {
+        if (!cancelled) setAllLoading(false);
+      }
+    }
+    loadAll();
+    return () => {
+      cancelled = true;
+    };
+  }, [allEnabled]);
 
   // Load categories from backend to support new normalized model
   const { data: categories = [] } = useQuery<Category[]>({
@@ -86,14 +142,15 @@ export function ProductsPage() {
     return m;
   }, [categories]);
 
-  const effectiveProducts = products.map(p => ({
+  const mapProduct = (p: Product): Product => ({
     ...p,
     // Backward-compatible category name: prefer category from API, else map from categoryId
     category: (p.category && p.category.trim()) || (p.categoryId && catMap.get(p.categoryId)?.name) || p.category,
     // Unit label derivation if not present
     unitLabel: p.unitLabel || (typeof p.g === 'number' && p.g > 0 ? `${p.g} g` : (typeof p.pieces === 'number' && p.pieces > 0 ? `${p.pieces} piece${p.pieces === 1 ? '' : 's'}` : undefined)),
     priceForUnitLabel: p.priceForUnitLabel || (typeof p.g === 'number' && p.g > 0 ? `${p.price} for ${p.g} g` : undefined),
-  }));
+  });
+  const catalogProducts: Product[] = (allEnabled ? (allCatalog ?? []) : products).map(mapProduct);
 
   // Derive available categories from the current product list
   const categoriesFromData = useMemo(() => {
@@ -102,13 +159,13 @@ export function ProductsPage() {
     if (categories.length > 0) {
       categories.forEach(c => set.add(c.name));
     } else {
-      for (const p of effectiveProducts) {
+      for (const p of catalogProducts) {
         const c = (p.category ?? '').toString().trim();
         if (c) set.add(c);
       }
     }
     return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [effectiveProducts, categories]);
+  }, [catalogProducts, categories]);
 
   const categoryOptions = useMemo(() => ['All', ...categoriesFromData], [categoriesFromData]);
 
@@ -124,8 +181,8 @@ export function ProductsPage() {
     }
   }, [categoriesFromData, selectedCategory]);
 
-  const filteredProducts = effectiveProducts
-    .filter(product => {
+  const filteredProducts: Product[] = catalogProducts
+    .filter((product: Product) => {
       const prodCategory = (product.category ?? '').toString().toLowerCase().trim();
       const selected = (selectedCategory ?? 'All').toString().toLowerCase().trim();
       const q = (searchQuery ?? '').toString().toLowerCase().trim();
@@ -140,7 +197,17 @@ export function ProductsPage() {
       return matchesCategory && matchesSearch;
   })
   // Default to name ordering; price sorting removed
-  .sort((a, b) => a.name.localeCompare(b.name));
+  .sort((a: Product, b: Product) => a.name.localeCompare(b.name));
+
+  // Paginate locally only in search mode (so results are independent of original server page)
+  const effectiveTotal = allEnabled ? filteredProducts.length : (data?.total ?? filteredProducts.length);
+  const totalPagesUI = allEnabled ? Math.max(1, Math.ceil(effectiveTotal / limit)) : (data?.totalPages ?? 1);
+  const displayedProducts: Product[] = allEnabled
+    ? filteredProducts.slice((page - 1) * limit, page * limit)
+    : filteredProducts;
+
+  const isPageFetching = isFetching || allLoading;
+  const isFirstLoad = (isLoading || (allEnabled && allCatalog === null)) && displayedProducts.length === 0;
 
   return (
     <motion.div 
@@ -203,13 +270,13 @@ export function ProductsPage() {
 
       {/* Results Summary */}
       <motion.div
-  className="flex items-center justify-between mb-4 sm:mb-6"
+        className="flex items-center justify-between mb-4 sm:mb-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6 }}
       >
         <p className="text-gray-600">
-          <span className="font-semibold text-green-600">{filteredProducts.length}</span> products found
+          <span className="font-semibold text-green-600">{effectiveTotal}</span> products found
         </p>
         {isError && (
           <button
@@ -223,7 +290,7 @@ export function ProductsPage() {
 
       {/* Products Grid */}
   <AnimatePresence mode="wait" initial={false}>
-  {(isLoading && (!effectiveProducts || effectiveProducts.length === 0)) ? (
+  {isFirstLoad ? (
           <motion.div
             className="text-center py-12"
             initial={{ opacity: 0 }}
@@ -241,19 +308,20 @@ export function ProductsPage() {
             variants={containerVariants}
             initial={false}
             animate="visible"
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 auto-rows-fr"
+            // Mobile: 2 columns like reference; tablet 3, desktop 4 (from lg)
+            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6"
           >
-            {filteredProducts.map(product => (
+      {displayedProducts.map((product: Product, idx: number) => (
               <motion.div
-                key={product._id}
+        key={product._id || `${product.name}-${idx}`}
                 layout
-                className="h-full"
+        className=""
               >
                 <ProductCard product={product} />
               </motion.div>
             ))}
             
-            {filteredProducts.length === 0 && (
+            {displayedProducts.length === 0 && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -269,6 +337,18 @@ export function ProductsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      {/* Pagination */}
+      <Pagination
+        currentPage={page}
+        totalPages={totalPagesUI}
+        onPageChange={setPage}
+        className="mt-6 sm:mt-8"
+      />
+
+      {/* Subtle loading bar during page fetch */}
+  {isPageFetching && (
+        <div className="fixed left-0 right-0 top-0 h-0.5 bg-gradient-to-r from-green-400 via-green-600 to-green-400 animate-pulse z-40" />
+      )}
     </motion.div>
   );
 }
