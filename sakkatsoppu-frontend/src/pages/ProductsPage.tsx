@@ -55,8 +55,15 @@ export function ProductsPage() {
     const p = new URLSearchParams(location.search);
     p.set('page', String(page));
     p.set('limit', String(limit));
-    navigate({ pathname: location.pathname, search: p.toString() }, { replace: true });
+    const nextSearch = p.toString();
+    if (nextSearch !== location.search.replace(/^\?/, '')) {
+      navigate({ pathname: location.pathname, search: nextSearch }, { replace: true });
+    }
   }, [page, limit, location.pathname, location.search, navigate]);
+
+  // Client-side full-catalog fetch toggle for search-only mode
+  const ALL_FETCH_LIMIT = 100; // batch size used only for all-pages retrieval
+  const allEnabled = debouncedSearch.length > 0;
 
   type ProductsEnvelope = { products: Product[]; total: number; page: number; totalPages: number };
   const { data, isLoading, isError, refetch, isFetching } = useQuery<ProductsEnvelope>({
@@ -73,14 +80,13 @@ export function ProductsPage() {
       return failureCount < 2;
     },
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
-    refetchOnMount: false,
+  refetchOnMount: false,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  enabled: !allEnabled, // when searching, we fetch all pages once and paginate client-side
   });
 
   const products: Product[] = data?.products ?? [];
-
-  // Client-side full-catalog fetch for search-only mode
-  const ALL_FETCH_LIMIT = 100; // batch size used only for all-pages retrieval
-  const allEnabled = debouncedSearch.length > 0;
   const [allCatalog, setAllCatalog] = useState<Product[] | null>(null);
   const [allLoading, setAllLoading] = useState(false);
   useEffect(() => {
@@ -93,12 +99,13 @@ export function ProductsPage() {
       setAllLoading(true);
       try {
         const first = (await getProducts({ page: 1, limit: ALL_FETCH_LIMIT })).data as ProductsEnvelope;
-        const totalPagesAll = Math.max(1, first.totalPages);
+  const totalPagesAll = Math.max(1, first.totalPages);
+  const MAX_PAGES_FETCH = 10; // safety cap to avoid too many requests
         if (totalPagesAll <= 1) {
           if (!cancelled) setAllCatalog(first.products);
         } else {
           const results: Product[][] = [first.products];
-          for (let p = 2; p <= totalPagesAll; p++) {
+          for (let p = 2; p <= Math.min(totalPagesAll, MAX_PAGES_FETCH); p++) {
             const r = (await getProducts({ page: p, limit: ALL_FETCH_LIMIT })).data as ProductsEnvelope;
             results.push(r.products);
           }
@@ -133,7 +140,9 @@ export function ProductsPage() {
       return failureCount < 2;
     },
     retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
-    refetchOnMount: false,
+  refetchOnMount: false,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
   });
 
   const catMap = useMemo(() => {

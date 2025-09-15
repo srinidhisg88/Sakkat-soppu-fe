@@ -65,6 +65,8 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
         : payload?.data ?? payload?.products ?? payload?.items ?? payload?.results ?? [];
       return list as Product[];
     },
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const effectiveProducts = products;

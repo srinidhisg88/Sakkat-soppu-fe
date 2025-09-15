@@ -69,7 +69,9 @@ export function AddToCartBarProvider({ children }: { children: React.ReactNode }
         return [] as Coupon[];
       }
     },
-    staleTime: 5 * 60_000,
+  staleTime: 5 * 60_000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
   });
 
   // Delivery settings for minimum order hint
@@ -90,7 +92,9 @@ export function AddToCartBarProvider({ children }: { children: React.ReactNode }
         return { enabled: true, deliveryFee: 0, freeDeliveryThreshold: 0, minOrderSubtotal: 0 } as DeliverySettings;
       }
     },
-    staleTime: 10 * 60_000,
+  staleTime: 10 * 60_000,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
   });
 
   const hints = useMemo(() => {

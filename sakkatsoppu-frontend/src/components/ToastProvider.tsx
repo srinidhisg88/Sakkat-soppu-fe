@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ToastContext, ToastType } from './ToastContext';
+import { ToastContext } from './ToastContext';
+import type { ToastType } from './Toast.types';
 
 type Toast = {
   id: string;
