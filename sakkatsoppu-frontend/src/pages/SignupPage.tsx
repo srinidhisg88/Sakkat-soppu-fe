@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLocation as useGeoLocation } from "../hooks/useLocation";
-import { isWithinMysore } from "../utils/geo";
 import {
   UserIcon,
   EnvelopeIcon,
@@ -34,6 +33,7 @@ export function SignupPage() {
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const { signup, loginWithGoogle } = useAuth();
   const navigate = useNavigate();
+  // Location is optional; no restriction
   const { getLocation, error: locationError } = useGeoLocation();
   const googleBtnRef = useRef<HTMLDivElement | null>(null);
   const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
@@ -65,14 +65,7 @@ export function SignupPage() {
     e.preventDefault();
     try {
       setError("");
-      // Validate service availability (Mysore area) if coordinates present
-      if (typeof formData.latitude === 'number' && typeof formData.longitude === 'number') {
-        const ok = isWithinMysore(formData.latitude, formData.longitude);
-        if (!ok) {
-          setError('Sorry, the service isn\'t available in your city right now.');
-          return;
-        }
-      }
+  // No geofencing: proceed without location checks
   const payloadBase: Record<string, unknown> = {
         name: formData.name,
         email: formData.email,
@@ -119,16 +112,7 @@ export function SignupPage() {
           const idToken = response.credential;
           if (!idToken) return;
           try {
-            // Check service area if location available
-            try {
-              const coords = await getLocation();
-              if (coords && !isWithinMysore(coords.latitude, coords.longitude)) {
-                setError('Sorry, the service isn\'t available in your city right now.');
-                return;
-              }
-            } catch {
-              // ignore when location is not available
-            }
+            // No geofencing in Google signup either
             const result = await loginWithGoogle(idToken);
             const needs = result && 'needsProfileCompletion' in result ? result.needsProfileCompletion : false;
             if (needs) {
@@ -153,7 +137,7 @@ export function SignupPage() {
         });
       }
     }
-  }, [loginWithGoogle, navigate, googleClientId, getLocation]);
+  }, [loginWithGoogle, navigate, googleClientId]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

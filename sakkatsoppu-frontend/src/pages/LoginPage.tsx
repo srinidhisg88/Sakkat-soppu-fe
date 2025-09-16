@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useLocation as useGeoLocation } from '../hooks/useLocation';
-import { isWithinMysore } from '../utils/geo';
 // Resolve logo via bundler so it’s included in the build
 const authLogo = new URL('../../logo_final.jpg', import.meta.url).href;
 import {
@@ -23,22 +21,13 @@ export function LoginPage() {
   const location = useLocation();
   const googleBtnRef = useRef<HTMLDivElement | null>(null);
   const googleClientId = (import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined)?.trim();
-  const { getLocation } = useGeoLocation();
+  // Location restriction removed; proceed without geofencing
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       setError('');
-      // Attempt geolocation; if available and outside service area, block
-      try {
-        const coords = await getLocation();
-        if (coords && !isWithinMysore(coords.latitude, coords.longitude)) {
-          setError("Sorry, the service isn't available in your city right now.");
-          return;
-        }
-      } catch {
-        // If user denies or unavailable, proceed without blocking
-      }
+  // No geofencing: proceed without location checks
       await login(email, password);
       // Navigate to the page the user was trying to access, or home
   const state = (location.state as RouteState) || null;
@@ -78,16 +67,7 @@ export function LoginPage() {
           if (!idToken) return;
           try {
             setError('');
-            // Attempt geolocation; block if outside service area
-            try {
-              const coords = await getLocation();
-              if (coords && !isWithinMysore(coords.latitude, coords.longitude)) {
-                setError("Sorry, the service isn't available in your city right now.");
-                return;
-              }
-            } catch {
-              // Continue if not available
-            }
+            // No geofencing in Google login either
             const result = await loginWithGoogle(idToken);
             const needs = result && 'needsProfileCompletion' in result ? result.needsProfileCompletion : false;
             if (needs) {
@@ -121,7 +101,7 @@ export function LoginPage() {
         // ignore
       }
     }
-  }, [loginWithGoogle, navigate, location.state, googleClientId, getLocation]);
+  }, [loginWithGoogle, navigate, location.state, googleClientId]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
