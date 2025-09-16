@@ -1,16 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useToast } from '../hooks/useToast';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { createOrder, getCoupons, getPublicDeliverySettings } from '../services/api';
+import { createOrder, getCoupons, getPublicDeliverySettings, getProduct } from '../services/api';
 import { useLocation } from '../hooks/useLocation';
 // Drawer animations handled inside CouponDrawer
 import CouponDrawer from '../components/CouponDrawer';
 
 export function CheckoutPage() {
   const { user, isAuthenticated } = useAuth();
-  const { items, totalPrice, clearCart } = useCart();
+  const { items, totalPrice, clearCart, updateQuantity } = useCart();
   const navigate = useNavigate();
   const { getLocation, error: locationError, loading: locating } = useLocation();
   const queryClient = useQueryClient();
@@ -18,6 +19,8 @@ export function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [couponOpen, setCouponOpen] = useState(false);
+  const [partialOOS, setPartialOOS] = useState<Array<{ productId: string; requested?: number; available?: number; name?: string }>>([]);
+  const { show } = useToast();
   // manual input moved into drawer component
   const [appliedCoupon, setAppliedCoupon] = useState<null | {
     code: string;
@@ -192,42 +195,130 @@ export function CheckoutPage() {
       setError('');
 
       // Try to create remote order; unauthenticated will use local fallback
-  // Dev note: submitting order with couponCode (debug log removed to satisfy lint)
+      // Dev note: submitting order with couponCode (debug log removed to satisfy lint)
       let newOrderId: string | undefined;
-  try {
-        if (isAuthenticated) {
-          const res = await createOrder({
-            ...formData,
-            paymentMode: 'COD',
-            idempotencyKey: (globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`),
-            couponCode: appliedCoupon?.code?.trim() ? appliedCoupon.code.trim() : undefined,
-          });
-          const data = res.data || {};
-          // Handle 201 structure with order object
-          const order = data.order || data;
-          newOrderId = order?._id || order?.id;
-          // Ensure orders list reflects the new order before navigation
-          await queryClient.invalidateQueries({ queryKey: ['orders'] });
-          await queryClient.refetchQueries({ queryKey: ['orders'], type: 'active' });
-          // Optionally show partial success info
-          if (Array.isArray(data.itemsOutOfStock) && data.itemsOutOfStock.length > 0) {
-            // Surface minimal info for now
-            setError(`${data.itemsOutOfStock.length} item(s) were out of stock and not included.`);
+      if (!isAuthenticated) {
+        setError('Please log in to place an order.');
+        navigate('/login');
+        return;
+      }
+
+      // Preflight: re-validate stock and auto-adjust cart if needed
+      try {
+        const adjustments: Array<{ productId: string; requested: number; available: number; name?: string }> = [];
+        await Promise.all(
+          items.map(async (ci) => {
+            try {
+              const res = await getProduct(ci.product._id);
+              const fresh = res.data as { stock?: number; name?: string };
+              const available = Math.max(0, Number(fresh?.stock ?? ci.product.stock ?? 0));
+              const requested = ci.quantity;
+              if (available <= 0 && requested > 0) {
+                adjustments.push({ productId: ci.product._id, requested, available, name: fresh?.name || ci.product.name });
+                await updateQuantity(ci.product._id, 0);
+              } else if (requested > available) {
+                adjustments.push({ productId: ci.product._id, requested, available, name: fresh?.name || ci.product.name });
+                await updateQuantity(ci.product._id, available);
+              }
+            } catch {
+              // If product fetch fails, assume 0 available to be safe
+              if (ci.quantity > 0) {
+                adjustments.push({ productId: ci.product._id, requested: ci.quantity, available: 0, name: ci.product.name });
+                await updateQuantity(ci.product._id, 0);
+              }
+            }
+          })
+        );
+
+        if (adjustments.length > 0) {
+          setPartialOOS(adjustments);
+          const allRemoved = adjustments.every((a) => a.available <= 0) && adjustments.length === items.length;
+          if (allRemoved) {
+            setError('All items are out of stock. Your cart was updated.');
+            show('All items are out of stock. Your cart was updated.', { type: 'error' });
+            return; // Stop here; let user review cart
           }
+          show(`${adjustments.length} item(s) adjusted to available stock.`, { type: 'warning' });
+        }
+      } catch {
+        // Ignore preflight failures and proceed; server will validate
+      }
+
+      try {
+        const res = await createOrder({
+          ...formData,
+          paymentMode: 'COD',
+          idempotencyKey: (globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`),
+          couponCode: appliedCoupon?.code?.trim() ? appliedCoupon.code.trim() : undefined,
+        });
+        const data = res.data || {};
+        // Success: 201 Created or 200 OK (idempotent replay)
+        const order = data.order || data;
+        newOrderId = order?._id || order?.id;
+        // Update orders cache
+        await queryClient.invalidateQueries({ queryKey: ['orders'] });
+        await queryClient.refetchQueries({ queryKey: ['orders'], type: 'active' });
+        // Partial fulfillment info
+        if (Array.isArray(data.itemsOutOfStock) && data.itemsOutOfStock.length > 0) {
+          setPartialOOS(data.itemsOutOfStock as typeof partialOOS);
+          show(`${data.itemsOutOfStock.length} item(s) removed due to stock.`, { type: 'warning' });
         } else {
-          throw new Error('Unauthenticated - create local order');
+          show('Order placed successfully', { type: 'success' });
         }
       } catch (err) {
-        // If server responded with 4xx/5xx, surface message and stop
-  const axiosErr = err as { response?: { status?: number; data?: unknown } };
-  const status = axiosErr?.response?.status;
-  const data = axiosErr?.response?.data as { message?: string; error?: string } | undefined;
-  const msg = data?.message || data?.error || undefined;
-        if (status && status >= 400) {
-          setError(msg || 'Failed to place order. Please check coupon code and details.');
-          throw err;
+        type ApiErrorData = {
+          message?: string;
+          error?: string;
+          reason?: string;
+          minOrderSubtotal?: number;
+          subtotal?: number;
+          shortfall?: number;
+          itemsOutOfStock?: unknown[];
+        };
+        const axiosErr = err as { response?: { status?: number; data?: ApiErrorData } };
+        const status = axiosErr?.response?.status;
+        const data = axiosErr?.response?.data;
+        if (typeof status === 'number') {
+          // Handle known responses explicitly
+          if (status === 400) {
+            // Cart empty or min order not met
+            const reason = data?.reason as string | undefined;
+            if (reason === 'MIN_ORDER_NOT_MET') {
+              const shortfall = Number(data?.shortfall ?? 0);
+              setError(`Add ₹${shortfall} more to reach minimum order value.`);
+              show(`Add ₹${shortfall} more to reach minimum order value.`, { type: 'warning' });
+            } else {
+              const msg = data?.message || 'Cart seems empty or invalid request.';
+              setError(msg);
+              show(msg, { type: 'error' });
+            }
+            return; // stop flow, don't clear cart
+          }
+          if (status === 401) {
+            setError('Your session expired. Please log in again.');
+            show('Your session expired. Please log in again.', { type: 'error' });
+            navigate('/login');
+            return;
+          }
+          if (status === 404) {
+            setError(data?.message || 'User not found. Please log in again.');
+            show('User not found. Please log in again.', { type: 'error' });
+            navigate('/login');
+            return;
+          }
+          if (status === 409) {
+            // All items out of stock
+            setError(data?.message || 'All items are out of stock.');
+            show('All items are out of stock.', { type: 'error' });
+            return; // stop flow, don't clear cart
+          }
+          // 5xx or other 4xx
+          setError(data?.message || 'Error creating order. Please try again.');
+          show(data?.message || 'Error creating order. Please try again.', { type: 'error' });
+          return;
         }
-        // create local order fallback (for unauthenticated or network failure)
+
+        // Network error (no status): create local order as a graceful fallback
         const localOrdersRaw = localStorage.getItem('sakkat_orders');
         const localOrders = localOrdersRaw ? JSON.parse(localOrdersRaw) : [];
         const id = `local_${Date.now()}`;
@@ -251,14 +342,15 @@ export function CheckoutPage() {
         newOrderId = id;
       }
 
-      clearCart();
-      if (newOrderId) {
-        navigate(`/orders/${newOrderId}`);
-      } else {
-        navigate('/orders');
-      }
+      // If we don't have an order id, it means we hit a handled error and stayed on the page
+      if (!newOrderId) return;
+
+  clearCart();
+      navigate(`/orders/${newOrderId}`);
     } catch (err) {
-      setError('Failed to place order. Please try again.');
+  // Unexpected error that slipped through
+  setError('Failed to place order. Please try again.');
+  show('Failed to place order. Please try again.', { type: 'error' });
     } finally {
   setLoading(false);
     }
@@ -385,6 +477,19 @@ export function CheckoutPage() {
               </button>
               {appliedCoupon && (
                 <p className="text-sm text-green-700 mt-2">Applied {appliedCoupon.code}. You save ₹{discountAmount}.</p>
+              )}
+              {partialOOS.length > 0 && (
+                <div className="mt-3 bg-amber-50 text-amber-800 rounded-lg p-3 space-y-1">
+                  <p className="text-sm font-medium">Removed due to stock:</p>
+                  <ul className="list-disc list-inside text-sm">
+                    {partialOOS.slice(0, 3).map((it, idx) => (
+                      <li key={`${it.productId}-${idx}`}>{it.name || it.productId} ({it.available ?? 0}/{it.requested ?? 0})</li>
+                    ))}
+                    {partialOOS.length > 3 && (
+                      <li>+{partialOOS.length - 3} more…</li>
+                    )}
+                  </ul>
+                </div>
               )}
             </div>
 

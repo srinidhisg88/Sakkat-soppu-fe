@@ -97,7 +97,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             throw new Error('No stock remaining');
           }
           if (quantity > remaining) {
-            quantity = remaining;
+            quantity = remaining; // clamp to available
           }
         }
         if (!existing) {
@@ -133,6 +133,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const updateQuantity = async (productId: string, quantity: number) => {
     if (isAuthenticated) {
       try {
+        // Clamp negative values to 0
+        if (quantity < 0) quantity = 0;
+        // Enforce stock upper bound using any known product info
+        const info = items.find(i => i.productId === productId)?.product;
+        if (info && typeof info.stock === 'number' && quantity > info.stock) {
+          quantity = info.stock;
+        }
         // Optimistic update to avoid flashing a loader on every +/- click
         const prev = items;
         if (quantity <= 0) {
