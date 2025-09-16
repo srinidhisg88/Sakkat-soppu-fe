@@ -47,45 +47,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const isAuthenticated = !!user && !!localStorage.getItem('token');
 
-  const resolveApiBase = () => {
-    // Mirror api.ts API_URL logic for assets
-    const env: Record<string, unknown> = (import.meta as unknown as { env?: Record<string, unknown> }).env || {};
-    const isDev = Boolean(env.DEV);
-    const viteApi = typeof env.VITE_API_URL === 'string' ? (env.VITE_API_URL as string) : undefined;
-    const base = isDev ? '/api' : (viteApi || '/api');
-    return String(base || '/api');
-  };
-
-  const normalizeAvatarUrl = useCallback((raw: string | null | undefined): string | null => {
-    if (!raw) return null;
-    const url = String(raw).trim();
-    if (!url) return null;
-    if (/^(https?:)?\/\//i.test(url) || url.startsWith('data:')) return url; // absolute or data URI
-    const apiBase = resolveApiBase().replace(/\/$/, '');
-    if (url.startsWith('/')) return `${apiBase}${url}`;
-    // handle bare paths like 'uploads/avatars/x.jpg'
-    return `${apiBase}/${url}`;
-  }, []);
-
   const setAndPersistAvatar = useCallback((url: string | null) => {
-    const normalized = normalizeAvatarUrl(url);
-    setAvatarUrl(normalized);
-    if (normalized) localStorage.setItem('avatarUrl', normalized);
+    setAvatarUrl(url);
+    if (url) localStorage.setItem('avatarUrl', url);
     else localStorage.removeItem('avatarUrl');
-  }, [normalizeAvatarUrl]);
-
-  const getAvatarFromUser = useCallback((u: Partial<User> | null | undefined): string | null => {
-    if (!u) return null;
-    // Prefer 'picture' over 'avatarUrl' as requested
-    const pic = (u as unknown as { picture?: string })?.picture || (u as unknown as { avatarUrl?: string })?.avatarUrl || null;
-    return pic || null;
   }, []);
 
   // Hydrate from localStorage on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
-  const storedAvatar = localStorage.getItem('avatarUrl');
-  if (storedAvatar) setAvatarUrl(storedAvatar);
+    const storedAvatar = localStorage.getItem('avatarUrl');
+    if (storedAvatar) setAvatarUrl(storedAvatar);
     if (!token) {
       setInitializing(false);
       return;
@@ -93,10 +65,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     (async () => {
       try {
         const res = await getProfile();
-  const u = (res.data as User) || null;
-  setUser(u);
-  const pic = getAvatarFromUser(u);
-  if (pic) setAndPersistAvatar(pic);
+        const u = (res.data as User) || null;
+        setUser(u);
+        const pic = (u as unknown as { avatarUrl?: string; picture?: string })?.avatarUrl || (u as unknown as { picture?: string })?.picture || null;
+        if (pic) setAndPersistAvatar(pic);
   } catch (err) {
         // Token invalid: clear it
         localStorage.removeItem('token');
@@ -106,45 +78,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setInitializing(false);
       }
     })();
-  }, [setAndPersistAvatar, getAvatarFromUser]);
+  }, [setAndPersistAvatar]);
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await apiLogin(email, password);
     const data = res.data as { token?: string; user?: User };
     if (data?.token) localStorage.setItem('token', data.token);
     if (data?.user) setUser(data.user);
-    const pic = getAvatarFromUser(data?.user);
+    const pic = (data?.user as unknown as { avatarUrl?: string; picture?: string })?.avatarUrl || (data?.user as unknown as { picture?: string })?.picture || null;
     if (pic) setAndPersistAvatar(pic);
     // Fetch fresh profile to ensure avatar and details are up-to-date
     try {
       const prof = await getProfile();
       const u = (prof.data as User) || null;
       if (u) setUser(u);
-      const p2 = getAvatarFromUser(u);
+      const p2 = (u as unknown as { avatarUrl?: string; picture?: string })?.avatarUrl || (u as unknown as { picture?: string })?.picture || null;
       if (p2) setAndPersistAvatar(p2);
     } catch {
       // ignore, user already set from login response
     }
-  }, [setAndPersistAvatar, getAvatarFromUser]);
+  }, [setAndPersistAvatar]);
 
   const signup = useCallback(async (payload: { name: string; email: string; password: string; phone?: string; address?: string; latitude?: number; longitude?: number; }) => {
     const res = await apiSignup(payload);
     const data = res.data as { token?: string; user?: User };
     if (data?.token) localStorage.setItem('token', data.token);
     if (data?.user) setUser(data.user);
-    const pic = getAvatarFromUser(data?.user);
+    const pic = (data?.user as unknown as { avatarUrl?: string; picture?: string })?.avatarUrl || (data?.user as unknown as { picture?: string })?.picture || null;
     if (pic) setAndPersistAvatar(pic);
     // Fetch fresh profile after signup to hydrate all fields
     try {
       const prof = await getProfile();
       const u = (prof.data as User) || null;
       if (u) setUser(u);
-      const p2 = getAvatarFromUser(u);
+      const p2 = (u as unknown as { avatarUrl?: string; picture?: string })?.avatarUrl || (u as unknown as { picture?: string })?.picture || null;
       if (p2) setAndPersistAvatar(p2);
     } catch {
       // ignore
     }
-  }, [setAndPersistAvatar, getAvatarFromUser]);
+  }, [setAndPersistAvatar]);
 
   const logout = useCallback(async () => {
     try {
@@ -165,20 +137,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const data = res.data as { token?: string; user?: User; needsProfileCompletion?: boolean };
     if (data?.token) localStorage.setItem('token', data.token);
     if (data?.user) setUser(data.user);
-    const pic = getAvatarFromUser(data?.user) || claimed || null;
+    const pic = (data?.user as unknown as { avatarUrl?: string; picture?: string })?.avatarUrl || (data?.user as unknown as { picture?: string })?.picture || claimed || null;
     if (pic) setAndPersistAvatar(pic);
     // Fetch fresh profile after Google login as well
     try {
       const prof = await getProfile();
       const u = (prof.data as User) || null;
       if (u) setUser(u);
-      const p2 = getAvatarFromUser(u);
+      const p2 = (u as unknown as { avatarUrl?: string; picture?: string })?.avatarUrl || (u as unknown as { picture?: string })?.picture || null;
       if (p2) setAndPersistAvatar(p2);
     } catch {
       // ignore
     }
     return { needsProfileCompletion: !!data?.needsProfileCompletion };
-  }, [setAndPersistAvatar, getAvatarFromUser]);
+  }, [setAndPersistAvatar]);
 
   const forgotPassword = useCallback(async (email: string) => {
     await apiForgotPassword(email);
@@ -193,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await getProfile();
       const u = (res.data as User) || null;
       setUser(u);
-      const pic = getAvatarFromUser(u);
+      const pic = (u as unknown as { avatarUrl?: string; picture?: string })?.avatarUrl || (u as unknown as { picture?: string })?.picture || null;
       if (pic) setAndPersistAvatar(pic);
     } catch (err) {
       const status = (err as { response?: { status?: number } })?.response?.status;
@@ -203,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAndPersistAvatar(null);
       }
     }
-  }, [setAndPersistAvatar, getAvatarFromUser]);
+  }, [setAndPersistAvatar]);
 
   const value: AuthContextType = useMemo(() => ({
     user,
