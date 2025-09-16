@@ -1,8 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo, useRef } from 'react';
 import { CartItem, Product } from '../types';
 import * as api from '../services/api';
 import { useAuth } from './AuthContext';
+import { useToast } from '../hooks/useToast';
 
 interface CartContextType {
   items: (CartItem & { product: Product })[];
@@ -22,6 +23,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<(CartItem & { product: Product })[]>([]);
   const [loading, setLoading] = useState(false);
   const { isAuthenticated } = useAuth();
+  const { show } = useToast();
+  const showRef = useRef(show);
+  useEffect(() => { showRef.current = show; }, [show]);
 
   type RemoteRow = { productId: Product | { _id?: string } | string | null | undefined; quantity: number };
   const hasId = (v: unknown): v is { _id: string } => {
@@ -66,7 +70,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setLoading(true);
         const response = await api.getCart();
         const rows = (response.data?.cart || []) as RemoteRow[];
-        setItems(mapRemoteCart(rows));
+        const next = mapRemoteCart(rows);
+        setItems((prev) => {
+          const prevIds = new Set(prev.map((p) => p.productId));
+          const nextIds = new Set(next.map((n) => n.productId));
+          let removed = 0;
+          prevIds.forEach((id) => { if (!nextIds.has(id)) removed++; });
+          if (removed > 0) {
+            showRef.current(`${removed} item(s) removed due to stock updates`, { type: 'warning' });
+          }
+          return next;
+        });
       } catch (error) {
         console.error('Error fetching cart:', error);
       } finally {

@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useToast } from '../hooks/useToast';
+import { useStockSubscription } from '../hooks/useStockSubscription';
+import { useCartAutoReconcile } from '../hooks/useCartAutoReconcile';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -11,7 +13,11 @@ import CouponDrawer from '../components/CouponDrawer';
 
 export function CheckoutPage() {
   const { user, isAuthenticated } = useAuth();
-  const { items, totalPrice, clearCart, updateQuantity } = useCart();
+  const { items, totalPrice, clearCart } = useCart();
+  // Subscribe to cart items to receive live stock updates and auto-reconcile
+  useStockSubscription(items.map(i => i.product._id));
+  const [reconcileEnabled, setReconcileEnabled] = useState(true);
+  const { Banner } = useCartAutoReconcile({ enabled: reconcileEnabled, mutate: false });
   const navigate = useNavigate();
   const { getLocation, error: locationError, loading: locating } = useLocation();
   const queryClient = useQueryClient();
@@ -193,6 +199,29 @@ export function CheckoutPage() {
     try {
       setLoading(true);
       setError('');
+      // Temporarily disable auto-reconcile to avoid cart changes mid-submit
+      setReconcileEnabled(false);
+      // Also pause the global reconciler
+      try {
+        (globalThis as unknown as { __RECONCILE_PAUSED?: boolean }).__RECONCILE_PAUSED = true;
+      } catch (e) {
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.debug('Failed to set reconcile pause flag', e);
+        }
+      }
+
+      // Client-side guards to avoid avoidable 400s
+      if (!formData.address || formData.address.trim().length === 0) {
+        setError('Please enter your delivery address.');
+        show('Please enter your delivery address.', { type: 'warning' });
+        return;
+      }
+      if (deliverySettings?.enabled && belowMinBy > 0) {
+        setError(`Add ₹${belowMinBy} more to reach minimum order value.`);
+        show(`Add ₹${belowMinBy} more to reach minimum order value.`, { type: 'warning' });
+        return;
+      }
 
       // Try to create remote order; unauthenticated will use local fallback
       // Dev note: submitting order with couponCode (debug log removed to satisfy lint)
@@ -215,17 +244,11 @@ export function CheckoutPage() {
               const requested = ci.quantity;
               if (available <= 0 && requested > 0) {
                 adjustments.push({ productId: ci.product._id, requested, available, name: fresh?.name || ci.product.name });
-                await updateQuantity(ci.product._id, 0);
               } else if (requested > available) {
                 adjustments.push({ productId: ci.product._id, requested, available, name: fresh?.name || ci.product.name });
-                await updateQuantity(ci.product._id, available);
               }
             } catch {
-              // If product fetch fails, assume 0 available to be safe
-              if (ci.quantity > 0) {
-                adjustments.push({ productId: ci.product._id, requested: ci.quantity, available: 0, name: ci.product.name });
-                await updateQuantity(ci.product._id, 0);
-              }
+              // If product fetch fails, skip adjustment and let server validate.
             }
           })
         );
@@ -234,14 +257,14 @@ export function CheckoutPage() {
           setPartialOOS(adjustments);
           const allRemoved = adjustments.every((a) => a.available <= 0) && adjustments.length === items.length;
           if (allRemoved) {
-            setError('All items are out of stock. Your cart was updated.');
-            show('All items are out of stock. Your cart was updated.', { type: 'error' });
-            return; // Stop here; let user review cart
+            setError('All items appear out of stock. Please review your cart.');
+            show('All items appear out of stock. Please review your cart.', { type: 'error' });
+            return; // Stop here; avoid submitting an empty order
           }
-          show(`${adjustments.length} item(s) adjusted to available stock.`, { type: 'warning' });
+          show(`${adjustments.length} item(s) may be reduced due to stock.`, { type: 'warning' });
         }
       } catch {
-        // Ignore preflight failures and proceed; server will validate
+        // Ignore preflight failures and proceed; server is source of truth
       }
 
       try {
@@ -250,6 +273,7 @@ export function CheckoutPage() {
           paymentMode: 'COD',
           idempotencyKey: (globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`),
           couponCode: appliedCoupon?.code?.trim() ? appliedCoupon.code.trim() : undefined,
+          items: items.map((i) => ({ productId: i.product._id, quantity: i.quantity })),
         });
         const data = res.data || {};
         // Success: 201 Created or 200 OK (idempotent replay)
@@ -278,6 +302,11 @@ export function CheckoutPage() {
         const axiosErr = err as { response?: { status?: number; data?: ApiErrorData } };
         const status = axiosErr?.response?.status;
         const data = axiosErr?.response?.data;
+        if (import.meta.env.DEV && data) {
+          // Surface server error payload to dev console for quick diagnosis
+          // eslint-disable-next-line no-console
+          console.debug('Order creation error payload:', data);
+        }
         if (typeof status === 'number') {
           // Handle known responses explicitly
           if (status === 400) {
@@ -353,6 +382,16 @@ export function CheckoutPage() {
   show('Failed to place order. Please try again.', { type: 'error' });
     } finally {
   setLoading(false);
+  // Re-enable auto-reconcile after submit cycle completes
+  setReconcileEnabled(true);
+  try {
+    (globalThis as unknown as { __RECONCILE_PAUSED?: boolean }).__RECONCILE_PAUSED = false;
+  } catch (e) {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.debug('Failed to clear reconcile pause flag', e);
+    }
+  }
     }
   };
 
@@ -467,6 +506,7 @@ export function CheckoutPage() {
 
             {/* Coupon form */}
             <div className="border-t pt-4">
+              {Banner}
               <button
                 type="button"
                 onClick={() => setCouponOpen(true)}

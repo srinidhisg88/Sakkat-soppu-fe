@@ -4,6 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { Product, Category } from '../types';
 import { getCategories, getProducts } from '../services/api';
+import { useStockSubscription } from '../hooks/useStockSubscription';
+import { useCart } from '../context/CartContext';
 import { ProductCard } from '../components/ProductCard';
 import { EmptyState } from '../components/EmptyState';
 import Pagination from '../components/Pagination';
@@ -26,6 +28,7 @@ const containerVariants = {
 
 
 export function ProductsPage() {
+  const { items: cartItems } = useCart();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
   const location = useLocation();
@@ -214,6 +217,12 @@ export function ProductsPage() {
   const displayedProducts: Product[] = allEnabled
     ? filteredProducts.slice((page - 1) * limit, page * limit)
     : filteredProducts;
+
+  // Live stock subscription for products displayed + items in cart
+  useStockSubscription([
+    ...displayedProducts.map((p) => p._id).filter(Boolean),
+    ...cartItems.map((ci) => ci.product._id).filter(Boolean),
+  ]);
 
   const isPageFetching = isFetching || allLoading;
   const isFirstLoad = (isLoading || (allEnabled && allCatalog === null)) && displayedProducts.length === 0;

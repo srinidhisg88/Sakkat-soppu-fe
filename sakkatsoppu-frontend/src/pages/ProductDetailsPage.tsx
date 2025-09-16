@@ -7,6 +7,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { useAddToCartBar } from '../hooks/useAddToCartBar';
+import { useStockSubscription } from '../hooks/useStockSubscription';
 
 export function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -23,6 +24,12 @@ export function ProductDetailsPage() {
     enabled: !!id,
     queryFn: async () => (await getProduct(id!)).data,
   });
+
+  // Subscribe to current product and any cart items for live stock
+  useStockSubscription([
+    ...(product?._id ? [product._id] : []),
+    ...items.map(i => i.product._id),
+  ]);
 
   const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ['categories', 'list'],

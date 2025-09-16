@@ -4,6 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { getPublicDeliverySettings } from '../services/api';
 import { useToast } from '../hooks/useToast';
 import { EmptyState } from '../components/EmptyState';
+import { useStockSubscription } from '../hooks/useStockSubscription';
+import { useStockContext } from '../context/StockContext';
+import { useCartAutoReconcile } from '../hooks/useCartAutoReconcile';
 // import { useAuth } from '../context/AuthContext';
 
 export function CartPage() {
@@ -37,6 +40,11 @@ export function CartPage() {
     },
     staleTime: 10 * 60_000,
   });
+
+  // Subscribe to all items in cart
+  useStockSubscription(items.map(i => i.product._id));
+  const { Banner } = useCartAutoReconcile({ enabled: true, mutate: false });
+  const { stocks } = useStockContext();
 
   // Minimum order gating for Checkout: BEFORE coupon (no coupon here) and EXCLUDING delivery fee
   const belowMinBy = (() => {
@@ -93,29 +101,34 @@ export function CartPage() {
                 </Link>
                 <p className="text-gray-600">{item.product.category}</p>
                 <p className="font-semibold mt-1">₹{item.product.price}</p>
-                {/* Unit-aware stock breakdown */}
+                {/* Unit-aware stock breakdown (live via SSE) */}
                 <div className="mt-1 text-xs text-gray-600 space-y-0.5">
-                  {item.product.stock > 0 ? (
+                  {(() => {
+                    const live = stocks.get(item.product._id);
+                    const stock = typeof live === 'number' ? live : (item.product.stock || 0);
+                    if (stock > 0) {
+                      return (
                     <>
-                      <p>{item.product.stock} packs available</p>
+                      <p>{stock} packs available</p>
                       {typeof item.product.g === 'number' && item.product.g > 0 && (() => {
                         const per = item.product.g;
-                        const totalG = item.product.stock * per;
+                        const totalG = stock * per;
                         const total = totalG >= 1000 ? `${(totalG/1000).toFixed(1)} kg` : `${totalG} g`;
                         return (
                           <p>Each: {per} g • Total ~{total}</p>
                         );
                       })()}
                       {typeof item.product.pieces === 'number' && item.product.pieces > 0 && (
-                        <p>Each: {item.product.pieces} pcs • Total {item.product.stock * item.product.pieces} pcs</p>
+                        <p>Each: {item.product.pieces} pcs • Total {stock * item.product.pieces} pcs</p>
                       )}
-                      {item.product.stock <= 5 && (
-                        <p className="text-amber-700">Only {item.product.stock} left</p>
+                      {stock <= 5 && (
+                        <p className="text-amber-700">Only {stock} left</p>
                       )}
                     </>
-                  ) : (
-                    <p className="text-red-600">Out of stock</p>
-                  )}
+                      );
+                    }
+                    return <p className="text-red-600">Out of stock</p>;
+                  })()}
                 </div>
                 <div className="flex items-center space-x-4 mt-2">
                   <div className="flex items-center border rounded">
@@ -130,9 +143,15 @@ export function CartPage() {
                     <span className="px-3 py-1">{item.quantity}</span>
                     <button
                       onClick={() => {
-                        if (item.product.stock && item.quantity >= item.product.stock) {
+                        const live = stocks.get(item.product._id);
+                        const stock = typeof live === 'number' ? live : (item.product.stock || 0);
+                        if (stock <= 0) {
+                          show('This item is currently out of stock', { type: 'warning' });
+                          return;
+                        }
+                        if (item.quantity >= stock) {
                           show('Cannot exceed available stock', { type: 'warning' });
-                          updateQuantity(item.product._id, item.product.stock);
+                          updateQuantity(item.product._id, stock);
                         } else {
                           updateQuantity(item.product._id, item.quantity + 1);
                         }
@@ -161,6 +180,7 @@ export function CartPage() {
         <div className="lg:col-span-1">
           <div className="bg-white p-6 rounded-lg shadow">
             <h2 className="text-xl font-bold mb-4">Order Summary</h2>
+            {Banner}
             <div className="space-y-2 mb-4">
               <div className="flex justify-between">
                 <span>Subtotal</span>

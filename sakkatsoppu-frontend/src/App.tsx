@@ -24,6 +24,8 @@ import { ToastProvider } from './components/ToastProvider';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
 import { AddToCartBarProvider } from './components/AddToCartBarProvider';
+import { StockProvider } from './context/StockContext';
+import LiveCartReconciler from './components/LiveCartReconciler';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -40,14 +42,17 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <CartProvider>
-          <ToastProvider>
+        <ToastProvider>
+          <CartProvider>
           <Router>
             <AddToCartBarProvider>
+            <StockProvider>
             <div className="min-h-screen bg-cream-100 relative">
               {/* Always render app; splash overlays with a circular reveal */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
                 <ScrollToTop />
+                {/* Global stock subscription + cart reconcile, active on all pages */}
+                <LiveCartReconciler />
                 <Navbar />
                 <main className="container mx-auto px-4 py-8">
                   <Routes>
@@ -118,10 +123,11 @@ function App() {
                 <SplashScreen duration={1200} onFinish={() => setSplashDone(true)} />
               )}
             </div>
+            </StockProvider>
             </AddToCartBarProvider>
           </Router>
-          </ToastProvider>
-        </CartProvider>
+          </CartProvider>
+        </ToastProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

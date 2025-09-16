@@ -56,13 +56,23 @@ export const createOrder = (orderData: {
   paymentMode: 'COD';
   idempotencyKey: string;
   couponCode?: string;
+  items?: Array<{ productId: string; quantity: number }>; // optional: include cart items if backend requires
 }) => {
   const payload: Record<string, unknown> = { ...orderData };
+  // Remove optional/zero coordinates if backend rejects 0,0
+  if (!payload.latitude || Number(payload.latitude) === 0) delete payload.latitude;
+  if (!payload.longitude || Number(payload.longitude) === 0) delete payload.longitude;
   if (typeof orderData.couponCode === 'string' && orderData.couponCode.trim() !== '') {
     const code = orderData.couponCode.trim();
   payload.couponCode = code; // Send only couponCode, per backend contract
   } else {
     delete payload.couponCode;
+  }
+  // Only include items if provided and non-empty
+  if (Array.isArray(orderData.items) && orderData.items.length > 0) {
+    payload.items = orderData.items.map((i) => ({ productId: i.productId, quantity: i.quantity }));
+  } else {
+    delete payload.items;
   }
   // Dev: POST /orders payload debug log removed to satisfy lint rules
   return api.post('/orders', payload);
