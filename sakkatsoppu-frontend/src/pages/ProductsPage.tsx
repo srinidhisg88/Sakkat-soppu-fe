@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { Product, Category } from '../types';
 import { getCategories, getProducts } from '../services/api';
+import { deriveUnitLabel, derivePriceForUnit } from '../utils/format';
 import { useStockSubscription } from '../hooks/useStockSubscription';
 import { useCart } from '../context/CartContext';
 import { ProductCard } from '../components/ProductCard';
@@ -159,8 +160,8 @@ export function ProductsPage() {
     // Backward-compatible category name: prefer category from API, else map from categoryId
     category: (p.category && p.category.trim()) || (p.categoryId && catMap.get(p.categoryId)?.name) || p.category,
     // Unit label derivation if not present
-    unitLabel: p.unitLabel || (typeof p.g === 'number' && p.g > 0 ? `${p.g} g` : (typeof p.pieces === 'number' && p.pieces > 0 ? `${p.pieces} piece${p.pieces === 1 ? '' : 's'}` : undefined)),
-    priceForUnitLabel: p.priceForUnitLabel || (typeof p.g === 'number' && p.g > 0 ? `${p.price} for ${p.g} g` : undefined),
+    unitLabel: deriveUnitLabel({ unitLabel: p.unitLabel, g: p.g ?? null, pieces: p.pieces ?? null }) || p.unitLabel,
+    priceForUnitLabel: derivePriceForUnit(p.price, { g: p.g ?? null, unitLabel: p.unitLabel ?? null }) || p.priceForUnitLabel,
   });
   const catalogProducts: Product[] = (allEnabled ? (allCatalog ?? []) : products).map(mapProduct);
 

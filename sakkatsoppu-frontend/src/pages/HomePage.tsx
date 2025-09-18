@@ -8,7 +8,7 @@ import { ProductCard } from '../components/ProductCard';
 import {
   ShoppingBagIcon,
   SparklesIcon,
-  TruckIcon,
+  CalendarDaysIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
@@ -22,14 +22,14 @@ const features = [
     description: "100% organic produce from local farms"
   },
   {
-    icon: <TruckIcon className="h-6 w-6" />,
-    title: "Fast Delivery",
-  description: "Fast, reliable delivery across the city"
+    icon: <CalendarDaysIcon className="h-6 w-6" />,
+    title: "Delivery Schedule",
+    description: "Order anytime Mon–Sat, enjoy doorstep delivery on Sun & Mon – freshness timed perfectly for you!"
   },
   {
     icon: <UserGroupIcon className="h-6 w-6" />,
     title: "Support Farmers",
-    description: "Direct from farmers, better prices"
+    description: "Backed by 50+ local farmers — fair pay, stronger communities."
   }
 ];
 
@@ -177,13 +177,17 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
             <motion.div
               key={index}
               variants={itemVariants}
-              className="bg-white p-6 rounded-xl shadow-md hover:shadow-xl transition-shadow"
+              className="group relative bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all border border-green-100/70 hover:-translate-y-0.5"
             >
-              <div className="w-12 h-12 bg-green-100 text-green-600 rounded-lg flex items-center justify-center mb-4">
+              {/* Accent bar */}
+              <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-green-500 via-emerald-400 to-green-500" />
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-100 to-green-50 text-green-700 ring-1 ring-green-200 group-hover:ring-green-300 shadow-sm flex items-center justify-center mb-4">
                 {feature.icon}
               </div>
-              <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
-              <p className="text-gray-600">{feature.description}</p>
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-1.5">{feature.title}</h3>
+              <p className="text-gray-700 text-sm sm:text-base leading-relaxed">
+                {feature.description}
+              </p>
             </motion.div>
           ))}
         </div>

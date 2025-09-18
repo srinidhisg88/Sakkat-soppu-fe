@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Order, Product } from '../types';
+import { deriveUnitLabel } from '../utils/format';
 import { getOrders, getProducts } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { EmptyState } from '../components/EmptyState';
@@ -207,11 +208,7 @@ export function OrdersPage() {
                       const name = item.name || prod?.name || fallbackName;
                       const grams = typeof item.g === 'number' ? item.g : (typeof prod?.g === 'number' ? prod.g : 0);
                       const pcs = typeof item.pieces === 'number' ? item.pieces : (typeof prod?.pieces === 'number' ? prod.pieces! : 0);
-                      const unitLabel = item.unitLabel || (prod?.unitLabel as string | undefined) || (grams && grams > 0
-                        ? `${grams} g`
-                        : pcs && pcs > 0
-                        ? `${pcs} piece${pcs === 1 ? '' : 's'}`
-                        : undefined);
+                      const unitLabel = deriveUnitLabel({ unitLabel: (item.unitLabel as string | undefined) || (prod?.unitLabel as string | undefined), g: grams, pieces: pcs });
                       return (
                         <>
                           <p className="font-medium text-sm">{name}</p>

@@ -1,3 +1,4 @@
+import { formatWeightFromGrams } from '../utils/format';
 import { useState, useEffect, useMemo } from 'react';
 import { useToast } from '../hooks/useToast';
 import { useStockSubscription } from '../hooks/useStockSubscription';
@@ -416,7 +417,7 @@ export function CheckoutPage() {
               const perG = typeof item.product.g === 'number' ? item.product.g : 0;
               const perPieces = typeof item.product.pieces === 'number' ? item.product.pieces : 0;
               const totalG = perG > 0 ? perG * item.quantity : 0;
-              const totalWeight = totalG >= 1000 ? `${(totalG/1000).toFixed(1)} kg` : (totalG > 0 ? `${totalG} g` : null);
+              const totalWeight = totalG > 0 ? (formatWeightFromGrams(totalG) || `${totalG} g`) : null;
               const totalPieces = perPieces > 0 ? perPieces * item.quantity : 0;
               return (
                 <div key={item.product._id} className="flex justify-between">
@@ -424,7 +425,7 @@ export function CheckoutPage() {
                     <p className="font-medium truncate">{item.product.name}</p>
                     <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
                     {perG > 0 && (
-                      <p className="text-xs text-gray-600">Each: {perG} g • Total: {totalWeight}</p>
+                      <p className="text-xs text-gray-600">Each: {formatWeightFromGrams(perG) || `${perG} g`} • Total: {totalWeight}</p>
                     )}
                     {perPieces > 0 && (
                       <p className="text-xs text-gray-600">Each: {perPieces} pcs • Total: {totalPieces} pcs</p>

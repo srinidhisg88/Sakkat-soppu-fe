@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { Link, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
 import { Product } from '../types';
+import { deriveUnitLabel } from '../utils/format';
 import { useCart } from '../context/CartContext';
 import { ShoppingCartIcon, SparklesIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../context/AuthContext';
@@ -140,11 +141,7 @@ export function ProductCard({ product }: ProductCardProps) {
             <div>
               <span className="text-lg sm:text-xl font-bold text-green-600">₹{product.price}</span>
               {(() => {
-                const unitLabel = product.unitLabel || (typeof product.g === 'number' && product.g > 0
-                  ? `${product.g} g`
-                  : typeof product.pieces === 'number' && product.pieces > 0
-                  ? `${product.pieces} piece${product.pieces === 1 ? '' : 's'}`
-                  : undefined);
+                const unitLabel = deriveUnitLabel({ unitLabel: product.unitLabel, g: product.g ?? null, pieces: product.pieces ?? null });
                 return unitLabel ? (
                   <span className="text-[11px] sm:text-xs text-gray-500 ml-1 truncate">for {unitLabel}</span>
                 ) : null;

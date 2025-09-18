@@ -3,6 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getOrders, getProducts, getProduct } from '../services/api';
 import { Product } from '../types';
+import { deriveUnitLabel } from '../utils/format';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -201,11 +202,7 @@ export default function OrderDetailsPage() {
                     prod = pid as Partial<Product>;
                   }
                   const name = prod?.name || 'Item';
-                  const unitLabel = prod?.unitLabel || (typeof prod?.g === 'number' && (prod.g as number) > 0
-                    ? `${prod.g} g`
-                    : typeof prod?.pieces === 'number' && (prod.pieces as number) > 0
-                    ? `${prod.pieces} piece${prod.pieces === 1 ? '' : 's'}`
-                    : undefined);
+                  const unitLabel = deriveUnitLabel({ unitLabel: prod?.unitLabel, g: (prod?.g as number | undefined) ?? null, pieces: (prod?.pieces as number | undefined) ?? null });
                   return (
                     <>
                       <p className="font-medium">{name}</p>

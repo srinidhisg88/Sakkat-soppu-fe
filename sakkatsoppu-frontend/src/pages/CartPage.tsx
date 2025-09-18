@@ -7,6 +7,7 @@ import { EmptyState } from '../components/EmptyState';
 import { useStockSubscription } from '../hooks/useStockSubscription';
 import { useStockContext } from '../context/StockContext';
 import { useCartAutoReconcile } from '../hooks/useCartAutoReconcile';
+import { formatWeightFromGrams } from '../utils/format';
 // import { useAuth } from '../context/AuthContext';
 
 export function CartPage() {
@@ -113,9 +114,9 @@ export function CartPage() {
                       {typeof item.product.g === 'number' && item.product.g > 0 && (() => {
                         const per = item.product.g;
                         const totalG = stock * per;
-                        const total = totalG >= 1000 ? `${(totalG/1000).toFixed(1)} kg` : `${totalG} g`;
+                        const total = formatWeightFromGrams(totalG) || `${totalG} g`;
                         return (
-                          <p>Each: {per} g • Total ~{total}</p>
+                          <p>Each: {formatWeightFromGrams(per) || `${per} g`} • Total ~{total}</p>
                         );
                       })()}
                       {typeof item.product.pieces === 'number' && item.product.pieces > 0 && (

@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams, Link, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Product, Farmer, Category } from '../types';
+import { deriveUnitLabel, derivePriceForUnit, formatWeightFromGrams } from '../utils/format';
 import { getProduct, getFarmer, getCategories } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -192,16 +193,8 @@ export function ProductDetailsPage() {
   const inCart = existingQty > 0;
 
   // Derive unit info
-  const derivedUnitLabel = product?.unitLabel || (
-    typeof product?.g === 'number' && product.g > 0
-      ? `${product.g} g`
-      : typeof product?.pieces === 'number' && product.pieces > 0
-      ? `${product.pieces} piece${product.pieces === 1 ? '' : 's'}`
-      : undefined
-  );
-  const derivedPriceForUnit = product?.priceForUnitLabel || (
-    typeof product?.g === 'number' && product.g > 0 ? `${product.price} for ${product.g} g` : undefined
-  );
+  const derivedUnitLabel = product ? deriveUnitLabel({ unitLabel: product.unitLabel, g: product.g ?? null, pieces: product.pieces ?? null }) : undefined;
+  const derivedPriceFor = product ? derivePriceForUnit(product.price, { g: product.g ?? null, unitLabel: product.unitLabel ?? null }) : undefined;
 
   // Map categoryId to name if needed
   const catName = (product?.category && product.category.trim()) ||
@@ -286,8 +279,8 @@ export function ProductDetailsPage() {
               {derivedUnitLabel && (
                 <span className="text-xs sm:text-sm text-gray-500 ml-2">for {derivedUnitLabel}</span>
               )}
-              {derivedPriceForUnit && (
-                <div className="text-xs sm:text-sm text-gray-500">{derivedPriceForUnit}</div>
+              {derivedPriceFor && (
+                <div className="text-xs sm:text-sm text-gray-500">{derivedPriceFor}</div>
               )}
             </div>
             {product.isOrganic && (
@@ -307,9 +300,14 @@ export function ProductDetailsPage() {
             {numericStock > 0 ? (
               <>
                 <p className="text-gray-800 font-medium">{numericStock} packs available</p>
-                {typeof product.g === 'number' && product.g > 0 && (
-                  <p className="text-sm text-gray-600">Each pack: {product.g} g • Total ~{((numericStock * product.g) / 1000).toFixed(1)} kg</p>
-                )}
+                {typeof product.g === 'number' && product.g > 0 && (() => {
+                  const per = formatWeightFromGrams(product.g);
+                  const totalG = numericStock * product.g;
+                  const total = formatWeightFromGrams(totalG) || `${totalG} g`;
+                  return (
+                    <p className="text-sm text-gray-600">Each pack: {per} • Total ~{total}</p>
+                  );
+                })()}
                 {typeof product.pieces === 'number' && product.pieces > 0 && (
                   <p className="text-sm text-gray-600">Each pack: {product.pieces} pcs • Total {numericStock * product.pieces} pcs</p>
                 )}
