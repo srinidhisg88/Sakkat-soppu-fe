@@ -116,3 +116,53 @@ export const updateProfile = (userData: {
 }) => api.put('/users/profile', userData);
 
 export default api;
+
+// Geocoding via backend proxy with fallback to OSM (dev only)
+type GeocodeSearchParams = { q: string; limit?: number };
+type GeocodeReverseParams = { lat: number; lon: number };
+
+export const geocodeSearch = async (params: GeocodeSearchParams) => {
+  try {
+    return await api.get('/proxy/geocode/search', { params });
+  } catch (err: unknown) {
+    // Fallback to public OSM Nominatim in dev if proxy missing
+    if (import.meta.env.DEV) {
+      const searchParams = new URLSearchParams({
+        q: params.q,
+        format: 'json',
+        addressdetails: '1',
+        limit: String(params.limit ?? 6),
+      });
+      return await api.get(`https://nominatim.openstreetmap.org/search?${searchParams.toString()}`, {
+        headers: {
+          'Accept': 'application/json',
+          // Provide a descriptive UA per OSM policy; no PII
+          'User-Agent': 'SakkatSoppuFrontend/1.0 (dev)'
+        },
+      });
+    }
+    throw err;
+  }
+};
+
+export const geocodeReverse = async (params: GeocodeReverseParams) => {
+  try {
+    return await api.get('/proxy/geocode/reverse', { params });
+  } catch (err: unknown) {
+    if (import.meta.env.DEV) {
+      const searchParams = new URLSearchParams({
+        lat: String(params.lat),
+        lon: String(params.lon),
+        format: 'json',
+        addressdetails: '1',
+      });
+      return await api.get(`https://nominatim.openstreetmap.org/reverse?${searchParams.toString()}`, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'SakkatSoppuFrontend/1.0 (dev)'
+        },
+      });
+    }
+    throw err;
+  }
+};

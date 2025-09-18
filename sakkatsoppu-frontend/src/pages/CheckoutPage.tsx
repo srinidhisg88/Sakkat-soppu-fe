@@ -10,6 +10,7 @@ import { createOrder, getCoupons, getPublicDeliverySettings, getProduct } from '
 import { useLocation } from '../hooks/useLocation';
 // Drawer animations handled inside CouponDrawer
 import CouponDrawer from '../components/CouponDrawer';
+import MapAddressModal from '../components/MapAddressModal';
 
 export function CheckoutPage() {
   const { user, isAuthenticated } = useAuth();
@@ -25,6 +26,7 @@ export function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [locationConfirmed, setLocationConfirmed] = useState(false);
   const [couponOpen, setCouponOpen] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [partialOOS, setPartialOOS] = useState<Array<{ productId: string; requested?: number; available?: number; name?: string }>>([]);
   const { show } = useToast();
   // manual input moved into drawer component
@@ -43,6 +45,10 @@ export function CheckoutPage() {
     latitude: user?.latitude || 0,
     longitude: user?.longitude || 0,
   });
+  const defaultCenter = useMemo(() => {
+    if (formData.latitude && formData.longitude) return { lat: formData.latitude, lon: formData.longitude };
+    return null;
+  }, [formData.latitude, formData.longitude]);
 
   // Delivery settings
   type DeliverySettings = {
@@ -496,6 +502,14 @@ export function CheckoutPage() {
               {locating ? 'Getting location...' : 'Use My Current Location'}
             </button>
 
+            <button
+              type="button"
+              onClick={() => setMapOpen(true)}
+              className="w-full mt-2 py-2 px-4 rounded-lg font-medium bg-blue-100 text-blue-800 hover:bg-blue-200"
+            >
+              Set address on map
+            </button>
+
             {/* Coordinates hidden per requirement; still stored and sent to API */}
             {locationConfirmed && !locationError && (
               <p className="text-sm text-green-700">Location confirmed</p>
@@ -558,6 +572,15 @@ export function CheckoutPage() {
               {loading ? 'Placing Order...' : `Place Order${appliedCoupon ? ` • ₹${finalAmount}` : ''}`}
             </button>
           </form>
+          <MapAddressModal
+            isOpen={mapOpen}
+            onClose={() => setMapOpen(false)}
+            defaultCenter={defaultCenter}
+            onConfirm={(data) => {
+              setFormData(prev => ({ ...prev, address: data.address, latitude: data.latitude, longitude: data.longitude }));
+              setLocationConfirmed(true);
+            }}
+          />
         </div>
       </div>
       <CouponDrawer
