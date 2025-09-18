@@ -23,18 +23,52 @@ interface CouponDrawerProps {
 }
 
 function computeSavings(c: Coupon, total: number) {
-  if (c.discountType === 'amount') return Math.max(0, Math.min(c.discountValue, total));
-  const pct = (c.discountValue / 100) * total;
-  const capped = c.maxDiscount == null ? pct : Math.min(pct, c.maxDiscount);
+  const totalNum = Number(total) || 0;
+  const value = Number(c.discountValue) || 0;
+  const max = c.maxDiscount == null ? null : (Number(c.maxDiscount) || 0);
+  if (c.discountType === 'amount') return Math.max(0, Math.min(value, totalNum));
+  const pct = (value / 100) * totalNum;
+  const capped = max == null ? pct : Math.min(pct, max);
   return Math.floor(capped);
 }
 
 function eligibilityReason(c: Coupon, total: number): { eligible: boolean; reason?: string; addMore?: number } {
-  const min = c.minOrderValue ?? 0;
-  if (min > 0 && total < min) {
-    return { eligible: false, reason: `Add ₹${min - total} more to avail this offer`, addMore: min - total };
+  const min = Number(c.minOrderValue ?? 0) || 0;
+  const totalNum = Number(total) || 0;
+  if (min > 0 && totalNum < min) {
+    return { eligible: false, reason: `Add ₹${min - totalNum} more to avail this offer`, addMore: min - totalNum };
   }
   return { eligible: true };
+}
+
+function parseDateBoundary(ts?: string | null, boundary: 'start' | 'end' = 'start'): number | null {
+  if (ts == null) return null;
+  // Support numbers (epoch seconds/ms) and strings
+  if (typeof ts === 'number') {
+    const n = ts > 1e12 ? ts : ts * 1000; // seconds vs ms
+    return Number.isFinite(n) ? n : null;
+  }
+  const raw = String(ts).trim();
+  if (!raw) return null;
+  // Pure epoch string
+  if (/^\d{10,13}$/.test(raw)) {
+    const n = Number(raw.length <= 10 ? Number(raw) * 1000 : Number(raw));
+    return Number.isFinite(n) ? n : null;
+  }
+  // Normalize space-separated datetime to ISO-like by replacing space with 'T'
+  const hasTime = /[T\s]\d{1,2}:\d{2}/.test(raw);
+  const normalized = hasTime ? raw.replace(' ', 'T') : raw + (boundary === 'start' ? 'T00:00:00' : 'T23:59:59.999');
+  const d = new Date(normalized);
+  const ms = d.getTime();
+  return isNaN(ms) ? null : ms;
+}
+
+function parseActiveFlag(v: unknown): boolean {
+  if (v == null) return true; // default to active if not provided
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v !== 0;
+  if (typeof v === 'string') return !/^(false|0|no|off)$/i.test(v.trim());
+  return true;
 }
 
 export default function CouponDrawer({ isOpen, onClose, coupons, totalAmount, appliedCode, onApply }: CouponDrawerProps) {
@@ -43,10 +77,17 @@ export default function CouponDrawer({ isOpen, onClose, coupons, totalAmount, ap
 
   const parsed = useMemo(() => {
     const list = coupons.map((c) => {
-      const active = c.isActive !== false && (!c.startsAt || new Date(c.startsAt).getTime() <= now) && (!c.expiresAt || new Date(c.expiresAt).getTime() >= now);
+      const startMs = parseDateBoundary(c.startsAt, 'start');
+      const endMs = parseDateBoundary(c.expiresAt, 'end');
+      // If date parsing fails (null), do not penalize the coupon
+      const withinWindow = (startMs == null || startMs <= now) && (endMs == null || now <= endMs);
+      const expired = endMs != null && now > endMs;
+      const notStarted = startMs != null && now < startMs;
+      const inactive = !parseActiveFlag(c.isActive);
+      const active = !inactive && !expired && !notStarted && withinWindow;
       const elig = eligibilityReason(c, totalAmount);
       const savings = active && elig.eligible ? computeSavings(c, totalAmount) : 0;
-      return { c, active, elig, savings };
+      return { c, active, elig, savings, expired, notStarted, inactive };
     });
     const eligible = list.filter(x => x.active && x.elig.eligible).sort((a,b) => b.savings - a.savings);
     const ineligible = list.filter(x => !(x.active && x.elig.eligible));
@@ -64,7 +105,7 @@ export default function CouponDrawer({ isOpen, onClose, coupons, totalAmount, ap
     // else ignore for now; could surface inline error
   };
 
-  const Card = ({ data }: { data: { c: Coupon; active: boolean; elig: { eligible: boolean; reason?: string }; savings: number } }) => {
+  const Card = ({ data }: { data: { c: Coupon; active: boolean; elig: { eligible: boolean; reason?: string }; savings: number; expired?: boolean; notStarted?: boolean; inactive?: boolean } }) => {
     const isPercent = data.c.discountType === 'percentage';
     const ribbon = isPercent ? 'PERCENT OFF' : 'FLAT OFF';
     const mainLine = isPercent
@@ -75,6 +116,12 @@ export default function CouponDrawer({ isOpen, onClose, coupons, totalAmount, ap
       : `Use code ${data.c.code} & get ₹${data.c.discountValue} off${data.c.minOrderValue ? ` on orders above ₹${data.c.minOrderValue}` : ''}`;
     const disabled = !(data.active && data.elig.eligible);
     const isBest = parsed.best && parsed.best === data.c.code;
+    let buttonLabel = appliedCode && appliedCode === data.c.code ? 'APPLIED' : 'APPLY';
+    if (disabled) {
+      if (data.expired) buttonLabel = 'EXPIRED';
+      else if (data.notStarted) buttonLabel = 'SOON';
+      else if (data.inactive) buttonLabel = 'UNAVAILABLE';
+    }
 
     return (
       <div className={`relative overflow-hidden rounded-xl border ${disabled ? 'border-gray-200 opacity-70' : 'border-green-200'} bg-white`}> 
@@ -99,12 +146,15 @@ export default function CouponDrawer({ isOpen, onClose, coupons, totalAmount, ap
               onClick={() => { onApply(data.c); onClose(); }}
               className={`text-sm font-semibold ${disabled ? 'text-gray-400 cursor-not-allowed' : 'text-green-700 hover:text-green-800'}`}
             >
-              {appliedCode && appliedCode === data.c.code ? 'APPLIED' : 'APPLY'}
+              {buttonLabel}
             </button>
           </div>
           <p className="text-sm text-gray-800 mt-2">{mainLine}</p>
           <div className="my-2 border-t border-dashed"></div>
           <p className="text-xs text-gray-600">{ruleLine}</p>
+          {disabled && data.expired && (
+            <p className="text-xs text-red-600 mt-1">Coupon expired</p>
+          )}
           {data.c.description && (
             <p className="text-xs text-gray-500 mt-1">{data.c.description}</p>
           )}

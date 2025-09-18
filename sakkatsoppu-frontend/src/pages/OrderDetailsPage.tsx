@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getOrders, getProducts } from '../services/api';
+import { getOrders, getProducts, getProduct } from '../services/api';
 import { Product } from '../types';
 
 const statusColors: Record<string, string> = {
@@ -59,7 +59,20 @@ export default function OrderDetailsPage() {
     },
     staleTime: 60_000,
   });
-  const productMap = new Map(products.map((p) => [p._id, p] as const));
+  // Map by both _id and id to be safe
+  const productMap = useMemo(() => {
+    const m = new Map<string, Product>();
+    for (const p of products) {
+      if (p && typeof p === 'object') {
+        const rec = p as unknown as Record<string, unknown>;
+        const idA = typeof rec._id === 'string' ? (rec._id as string) : undefined;
+        const idB = typeof rec.id === 'string' ? (rec.id as string) : undefined;
+        if (idA) m.set(idA, p);
+        if (idB) m.set(idB, p);
+      }
+    }
+    return m;
+  }, [products]);
 
   const order: OrderLike | undefined = useMemo(() => {
     const localRaw = localStorage.getItem('sakkat_orders');
@@ -67,6 +80,39 @@ export default function OrderDetailsPage() {
     const combined = [...localOrders, ...remoteOrders];
     return combined.find((o) => (o._id || o.id) === id);
   }, [id, remoteOrders]);
+
+  // Fetch any missing products for this order so names always display
+  const [extraProducts, setExtraProducts] = useState<Map<string, Product>>(new Map());
+  useEffect(() => {
+    let cancelled = false;
+    const items = (order?.items || []) as Array<{ productId: string; quantity: number; price?: number }>;
+    const missing = items
+      .map((it) => it.productId)
+      .filter((pid) => typeof pid === 'string' && !productMap.has(pid) && !extraProducts.has(pid));
+    if (missing.length === 0) return;
+    (async () => {
+      const entries: Array<[string, Product]> = [];
+      await Promise.all(
+        missing.slice(0, 100).map(async (pid) => {
+          try {
+            const res = await getProduct(pid);
+            const p = res.data as Product;
+            if (p) entries.push([pid, p]);
+          } catch {
+            // ignore
+          }
+        })
+      );
+      if (!cancelled && entries.length > 0) {
+        setExtraProducts((prev) => {
+          const m = new Map(prev);
+          for (const [k, v] of entries) m.set(k, v);
+          return m;
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [order?.items, productMap, extraProducts]);
 
   if (ordersLoading || ordersFetching) {
     return <div className="max-w-3xl mx-auto p-6">Loading order…</div>;
@@ -150,11 +196,11 @@ export default function OrderDetailsPage() {
                   const pid: unknown = item.productId as unknown;
                   let prod: Partial<Product> | undefined;
                   if (typeof pid === 'string') {
-                    prod = productMap.get(pid);
+                    prod = productMap.get(pid) || extraProducts.get(pid);
                   } else if (pid && typeof pid === 'object') {
                     prod = pid as Partial<Product>;
                   }
-                  const name = prod?.name || (typeof pid === 'string' ? `Product ${pid.slice(0,6)}…` : 'Product');
+                  const name = prod?.name || 'Item';
                   const unitLabel = prod?.unitLabel || (typeof prod?.g === 'number' && (prod.g as number) > 0
                     ? `${prod.g} g`
                     : typeof prod?.pieces === 'number' && (prod.pieces as number) > 0

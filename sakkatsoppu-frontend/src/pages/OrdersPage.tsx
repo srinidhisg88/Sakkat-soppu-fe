@@ -76,7 +76,18 @@ export function OrdersPage() {
     staleTime: 60_000,
   });
 
-  const productMap = new Map(products.map((p) => [p._id, p] as const));
+  // Map by both _id and id to be safe
+  const productMap = new Map<string, Product>();
+  for (const p of products) {
+    if (p && typeof p === 'object') {
+      // Use a safe intermediate cast suggested by TS when converting to Record
+      const rec = (p as unknown) as Record<string, unknown>;
+      const idA = typeof rec._id === 'string' ? (rec._id as string) : undefined;
+      const idB = typeof rec.id === 'string' ? (rec.id as string) : undefined;
+      if (idA) productMap.set(idA, p);
+      if (idB) productMap.set(idB, p);
+    }
+  }
 
   // If unauthenticated, read local orders from localStorage
   let effectiveOrders: OrderLike[] = orders;
@@ -170,25 +181,36 @@ export function OrdersPage() {
             </div>
 
   <div className="border-t border-b py-3 mb-3">
-              {(order.items || []).map((item) => (
+              {(() => {
+                // Allow optional, backend-embedded fields without changing global OrderItem type
+                type ExtendedOrderItem = Order['items'][number] & {
+                  id?: string;
+                  product?: Partial<Product> | string;
+                  name?: string;
+                  g?: number;
+                  pieces?: number;
+                  unitLabel?: string;
+                };
+                const items = (order.items || []) as unknown as ExtendedOrderItem[];
+                return items.map((item) => (
                 <div
-                  key={item.productId}
+                  key={String(item.productId || item.id || Math.random())}
       className="flex justify-between items-center py-1.5"
                 >
                   <div>
                     {(() => {
-                      const pid: unknown = item.productId as unknown;
-                      let prod: Partial<Product> | undefined;
-                      if (typeof pid === 'string') {
-                        prod = productMap.get(pid);
-                      } else if (pid && typeof pid === 'object') {
-                        prod = pid as Partial<Product>;
-                      }
-                      const name = prod?.name || (typeof pid === 'string' ? `Product ${pid.slice(0,6)}…` : 'Product');
-                      const unitLabel = prod?.unitLabel || (typeof prod?.g === 'number' && (prod.g as number) > 0
-                        ? `${prod.g} g`
-                        : typeof prod?.pieces === 'number' && (prod.pieces as number) > 0
-                        ? `${prod.pieces} piece${prod.pieces === 1 ? '' : 's'}`
+                      const pid = item.productId;
+                      // Prefer embedded product if present, otherwise map by productId
+                      const embedded = (typeof item.product === 'object' ? item.product as Partial<Product> : undefined);
+                      const prod: Partial<Product> | undefined = embedded || productMap.get(pid);
+                      const fallbackName = 'Item';
+                      const name = item.name || prod?.name || fallbackName;
+                      const grams = typeof item.g === 'number' ? item.g : (typeof prod?.g === 'number' ? prod.g : 0);
+                      const pcs = typeof item.pieces === 'number' ? item.pieces : (typeof prod?.pieces === 'number' ? prod.pieces! : 0);
+                      const unitLabel = item.unitLabel || (prod?.unitLabel as string | undefined) || (grams && grams > 0
+                        ? `${grams} g`
+                        : pcs && pcs > 0
+                        ? `${pcs} piece${pcs === 1 ? '' : 's'}`
                         : undefined);
                       return (
                         <>
@@ -198,9 +220,10 @@ export function OrdersPage() {
                       );
                     })()}
                   </div>
-                  <p className="font-medium text-sm">₹{(item.price || 0) * item.quantity}</p>
+                  <p className="font-medium text-sm">₹{(Number(item.price) || 0) * Number(item.quantity || 0)}</p>
                 </div>
-              ))}
+                ));
+              })()}
             </div>
             {/* Pricing breakdown in the middle section */}
             <div className="mt-2 space-y-1 text-sm">

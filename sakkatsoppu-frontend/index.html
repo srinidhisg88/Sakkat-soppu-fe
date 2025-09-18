@@ -2,10 +2,26 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-  <link rel="icon" type="image/jpeg" />
+    <!-- Site icons: keep at least a 48x48 PNG or JPG accessible at a stable path -->
+    <link rel="icon" href="/logo_final.jpg" type="image/jpeg" sizes="any" />
+    <link rel="apple-touch-icon" href="/logo_final.jpg" />
+    <link rel="manifest" href="/site.webmanifest" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sakkat Soppu - Fresh from Farmers</title>
     <meta name="description" content="Fresh organic produce delivered straight from farmers to your doorstep." />
+
+    <!-- Open Graph for rich previews -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Sakkat Soppu - Fresh from Farmers" />
+    <meta property="og:description" content="Fresh organic produce delivered straight from farmers to your doorstep." />
+    <meta property="og:image" content="/logo_final.jpg" />
+    <meta property="og:site_name" content="Sakkat Soppu" />
+
+    <!-- Twitter Card (fallback if shared on X) -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Sakkat Soppu - Fresh from Farmers" />
+    <meta name="twitter:description" content="Fresh organic produce delivered straight from farmers to your doorstep." />
+    <meta name="twitter:image" content="/logo_final.jpg" />
     <!-- Add web fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,6 +32,33 @@
   </head>
   <body class="font-sans antialiased">
     <div id="root"></div>
+    <!-- Inject Organization/WebSite JSON-LD with absolute URLs for Google Logo rich result -->
+    <script>
+      (function () {
+        try {
+          var origin = window.location.origin || '';
+          var org = {
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: 'Sakkat Soppu',
+            url: origin + '/',
+            logo: origin + '/logo_final.jpg'
+          };
+          var site = {
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'Sakkat Soppu',
+            url: origin + '/',
+          };
+          var script = document.createElement('script');
+          script.type = 'application/ld+json';
+          script.text = JSON.stringify([org, site]);
+          document.head.appendChild(script);
+        } catch (e) {
+          /* no-op */
+        }
+      })();
+    </script>
     <script type="module">
       // Use Vite to resolve the logo file and set as favicon at runtime
       import logoUrl from './logo_final.jpg?url';
