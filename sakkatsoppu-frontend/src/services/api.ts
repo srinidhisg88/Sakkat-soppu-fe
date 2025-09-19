@@ -12,7 +12,7 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   const url = config.url || '';
-  const publicPrefixes = ['/products', '/admin/categories', '/farmers', '/coupons', '/public'];
+  const publicPrefixes = ['/products', '/admin/categories', '/farmers', '/farmer', '/coupons', '/public'];
   const isPublic = publicPrefixes.some((p) => url.startsWith(p));
   const isAuthRoute = url.startsWith('/auth/');
   if (token && !isPublic && !isAuthRoute) {
@@ -35,8 +35,10 @@ export const getPublicCoupons = (params?: { page?: number; limit?: number; searc
 // Delivery settings (public)
 export const getPublicDeliverySettings = () => api.get('/public/settings/delivery');
 
-// Farmers (kept if backend supports)
-export const getFarmer = (id: string) => api.get(`/farmers/${id}`);
+// Farmers
+export const getFarmers = (params?: { page?: number; limit?: number; q?: string }) =>
+  api.get('/farmer', { params });
+export const getFarmerById = (id: string) => api.get(`/farmer/${id}`);
 
 // Cart (spec-compliant)
 export const getCart = () => api.get('/cart');

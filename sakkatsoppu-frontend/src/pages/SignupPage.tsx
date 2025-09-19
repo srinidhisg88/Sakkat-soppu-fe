@@ -223,12 +223,6 @@ export function SignupPage() {
               required
               value={formData.address}
               onChange={handleChange}
-              onFocus={() => {
-                // Prompt for location permission when user focuses the address field
-                if (!formData.address) {
-                  handleGetLocation();
-                }
-              }}
               placeholder="Address"
               className="w-full px-3 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
             />

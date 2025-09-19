@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom';
 import { Product } from '../types';
 import { getProducts } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
+import { usePoliciesModal } from '../components/PoliciesModalContext';
+import AboutFarmersSection from '../components/AboutFarmersSection';
 import {
   ShoppingBagIcon,
   SparklesIcon,
@@ -54,6 +56,7 @@ const itemVariants = {
 type HomePageProps = { startAnimations?: boolean };
 
 export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) => {
+  const policies = usePoliciesModal();
   const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: ['products', 'home-featured'],
     queryFn: async () => {
@@ -232,6 +235,34 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
           <div className="text-center py-12 text-gray-600">No products to show.</div>
         )}
       </section>
+
+      {/* Policies */}
+        {/* Policies trigger */}
+        <div className="max-w-6xl mx-auto px-4 mt-8">
+          <button
+            type="button"
+            onClick={() => policies.open()}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 text-green-800 hover:bg-green-100 border border-green-200"
+          >
+            View Policies
+          </button>
+        </div>
+
+        {/* Farmers CTA */}
+        <div className="max-w-6xl mx-auto px-4 mt-12">
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-2xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-green-800">Meet the farmers behind your food</h2>
+              <p className="text-green-700 mt-1">From seed to plate — honest produce from people you can trust.</p>
+            </div>
+            <a href="/farmers" className="inline-flex items-center justify-center px-5 py-3 rounded-xl bg-green-600 text-white hover:bg-green-700 shadow">
+              Explore Farmers
+            </a>
+          </div>
+        </div>
+
+        {/* About our farmers */}
+        <AboutFarmersSection />
     </div>
   );
 }

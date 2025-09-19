@@ -7,3 +7,24 @@
     @apply bg-cream-100;
   }
 }
+
+/* Chip float/fade animation */
+@keyframes float-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@layer utilities {
+  .animate-float-fade {
+    animation: float-fade 600ms ease-out both;
+  }
+}

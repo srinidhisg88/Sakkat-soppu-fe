@@ -2,12 +2,15 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePoliciesModal } from './PoliciesModalContext';
 import { useCart } from '../context/CartContext';
 import {
   HomeIcon,
   ShoppingBagIcon,
   ShoppingCartIcon,
   ClipboardDocumentListIcon,
+  ShieldCheckIcon,
+  UserGroupIcon,
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
   Bars3Icon,
@@ -18,6 +21,7 @@ export function Navbar() {
   const { isAuthenticated, user, logout, avatarUrl } = useAuth();
   const { uniqueItems } = useCart();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const policies = usePoliciesModal();
 
   // Resolve logo file path via Vite's asset handling
   const legacyLogoUrl = new URL('../../logo.jpeg', import.meta.url).href;
@@ -84,6 +88,27 @@ export function Navbar() {
                 <span>Products</span>
               </Link>
             </motion.div>
+
+            <motion.div
+              variants={navItemVariants}
+              whileHover="hover"
+              className="relative group"
+            >
+              <Link to="/farmers" className="flex items-center space-x-1 py-2 px-3 rounded-lg group-hover:bg-green-50 transition-colors">
+                <UserGroupIcon className="h-5 w-5 text-green-600" />
+                <span>Farmers</span>
+              </Link>
+            </motion.div>
+
+            <motion.button
+              variants={navItemVariants}
+              whileHover="hover"
+              onClick={() => policies.open()}
+              className="relative group flex items-center space-x-1 py-2 px-3 rounded-lg hover:bg-green-50 transition-colors"
+            >
+              <ShieldCheckIcon className="h-5 w-5 text-green-600" />
+              <span>Policies</span>
+            </motion.button>
 
             {/* Cart - visible for all users */}
             <motion.div
@@ -203,6 +228,14 @@ export function Navbar() {
                 <ClipboardDocumentListIcon className="h-5 w-5 text-green-600" />
                 <span>Orders</span>
               </Link>
+              <Link onClick={() => setMobileOpen(false)} to="/farmers" className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-green-50">
+                <UserGroupIcon className="h-5 w-5 text-green-600" />
+                <span>Farmers</span>
+              </Link>
+              <button onClick={() => { setMobileOpen(false); policies.open(); }} className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-green-50 w-full text-left">
+                <ShieldCheckIcon className="h-5 w-5 text-green-600" />
+                <span>Policies</span>
+              </button>
               {/* Support removed from mobile menu per requirement */}
               <Link onClick={() => setMobileOpen(false)} to="/cart" className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-green-50">
                 <div className="relative">

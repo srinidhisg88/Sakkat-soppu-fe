@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate, useLocation as useRouterLocation } from '
 import { useQuery } from '@tanstack/react-query';
 import { Product, Farmer, Category } from '../types';
 import { deriveUnitLabel, derivePriceForUnit, formatWeightFromGrams } from '../utils/format';
-import { getProduct, getFarmer, getCategories } from '../services/api';
+import { getProduct, getFarmerById, getCategories } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -49,7 +49,7 @@ export function ProductDetailsPage() {
     queryFn: async () => {
       const fid = product?.farmerId;
       if (!fid) throw new Error('No farmer id');
-      const res = await getFarmer(fid as string);
+      const res = await getFarmerById(fid as string);
       return res.data;
     },
   });

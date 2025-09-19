@@ -38,6 +38,9 @@ export interface Farmer {
   farmDescription: string;
   farmImages: string[];
   farmVideos: string[];
+  // Some list APIs may return these alternate fields
+  imageUrl?: string;
+  images?: string[];
   latitude: number;
   longitude: number;
   role: 'farmer';

@@ -1,97 +1,140 @@
-import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { getFarmer, getFarmerProducts } from '../services/api';
-import { Farmer, Product } from '../types';
-import { ProductCard } from '../components/ProductCard';
+import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { getFarmerById } from "../services/api";
+import { Farmer } from "../types";
+import { useEffect, useState } from "react";
 
 export function FarmerProfilePage() {
   const { id } = useParams<{ id: string }>();
 
   const { data: farmer, isLoading: farmerLoading } = useQuery<Farmer>({
-    queryKey: ['farmer', id],
-  queryFn: async () => (await getFarmer(id!)).data,
+    queryKey: ["farmer", id],
+    queryFn: async () => (await getFarmerById(id!)).data,
   });
 
-  const { data: products = [], isLoading: productsLoading } = useQuery<Product[]>({
-    queryKey: ['farmerProducts', id],
-  queryFn: async () => (await getFarmerProducts(id!)).data,
-  });
+  // Media order: primary image first, then farmImages, then videos
+  const allMedia = [
+    farmer?.imageUrl || null,
+    ...(farmer?.farmImages || []),
+    ...(farmer?.farmVideos || []),
+  ].filter(Boolean) as string[];
+
+  const [activeMedia, setActiveMedia] = useState<string | null>(
+    allMedia[0] || null
+  );
+
+  // Utility to detect if a media URL is a video (by common extensions)
+  const isVideo = (url: string) =>
+    /\.(mp4|webm|ogg|ogv|mov|m4v)(\?.*)?$/i.test(url);
+
+  // Ensure active media initializes/updates when data loads or media list changes
+  useEffect(() => {
+    if (!activeMedia || (activeMedia && !allMedia.includes(activeMedia))) {
+      setActiveMedia(allMedia[0] || null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(allMedia)]);
 
   if (farmerLoading || !farmer) {
-    return <div className="text-center py-8">Loading farmer details...</div>;
+    return (
+      <div className="text-center py-12 text-green-700 font-medium animate-pulse">
+        🌱 Loading farmer details…
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        {/* Farm Images */}
-  {(farmer.farmImages || []).length > 0 && (
-          <div className="relative h-64 md:h-96">
-            <img
-              src={farmer.farmImages[0]}
-              alt={farmer.farmName}
-              className="w-full h-full object-cover"
-            />
+    <div className="max-w-6xl mx-auto px-4 py-10">
+      <div className="bg-gradient-to-br from-green-50 to-amber-50 rounded-2xl shadow-xl overflow-hidden border border-green-100">
+        {/* Main Media (responsive, no cropping) */}
+        {activeMedia && (
+          <div className="relative w-full bg-green-100 flex items-center justify-center">
+            {isVideo(activeMedia) ? (
+              <video
+                src={activeMedia}
+                controls
+                playsInline
+                className="w-full h-auto max-h-[70vh] object-contain bg-black/5"
+              />
+            ) : (
+              <img
+                src={activeMedia}
+                alt={farmer.farmName}
+                className="w-full h-auto max-h-[70vh] object-contain bg-black/5"
+                loading="lazy"
+              />
+            )}
+          </div>
+        )}
+
+        {/* Thumbnails */}
+        {allMedia.length > 1 && (
+          <div className="flex gap-3 overflow-x-auto px-4 py-3 bg-green-50 border-t border-green-100">
+            {allMedia.map((media, idx) => (
+              <button
+                key={idx}
+                onClick={() => setActiveMedia(media)}
+                aria-current={activeMedia === media}
+                className={`flex-shrink-0 w-24 h-16 rounded-lg overflow-hidden border-2 transition-all duration-300 bg-white grid place-items-center 
+                  ${
+                    activeMedia === media
+                      ? "border-green-600 scale-105"
+                      : "border-transparent hover:border-green-400"
+                  }`}
+              >
+                {isVideo(media) ? (
+                  <video
+                    src={media}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <img
+                    src={media}
+                    alt={`Media ${idx + 1}`}
+                    className="w-full h-full object-contain"
+                    loading="lazy"
+                  />
+                )}
+              </button>
+            ))}
           </div>
         )}
 
         {/* Farm Info */}
-        <div className="p-6">
-          <h1 className="text-3xl font-bold">{farmer.farmName}</h1>
-          <p className="text-gray-600 mt-2">by {farmer.name}</p>
-          <p className="text-gray-700 mt-4">{farmer.farmDescription}</p>
-
-          <div className="mt-6 space-y-4">
-            <div>
-              <h2 className="text-sm font-medium text-gray-700">Location</h2>
-              <p className="mt-1">{farmer.address}</p>
-            </div>
-
-            <div>
-              <h2 className="text-sm font-medium text-gray-700">Contact</h2>
-              <p className="mt-1">{farmer.phone}</p>
-              <p className="mt-1">{farmer.email}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Farm Videos */}
-  {(farmer.farmVideos || []).length > 0 && (
-        <div className="mt-8">
-          <h2 className="text-2xl font-bold mb-4">Farm Videos</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    {(farmer.farmVideos || []).map((video, index) => (
-              <div key={index} className="aspect-w-16 aspect-h-9">
-                <video
-                  src={video}
-                  controls
-                  className="w-full rounded-lg shadow"
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Farmer's Products */}
-      <div className="mt-12">
-        <h2 className="text-2xl font-bold mb-6">Products from {farmer.farmName}</h2>
-        {productsLoading ? (
-          <div className="text-center py-8">Loading products...</div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {products.map(product => (
-              <ProductCard key={product._id} product={product} />
-            ))}
-          </div>
-        )}
-        {!productsLoading && products.length === 0 && (
-          <p className="text-center text-gray-600">
-            No products available from this farmer at the moment.
+        <div className="p-6 md:p-8">
+          <h1 className="text-3xl font-extrabold text-green-800 tracking-tight">
+            {farmer.farmName}
+          </h1>
+          <p className="text-amber-800 font-medium mt-1">
+            👨‍🌾 by {farmer.name}
           </p>
-        )}
+          <p className="text-gray-700 mt-4 leading-relaxed">
+            {farmer.farmDescription}
+          </p>
+
+          <div className="mt-6 grid gap-6 sm:grid-cols-2">
+            <div className="bg-white rounded-xl shadow-md p-4 border border-green-100">
+              <h2 className="text-sm font-semibold text-green-700 flex items-center gap-1">
+                📍 Location
+              </h2>
+              <p className="mt-1 text-gray-800">{farmer.address}</p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-md p-4 border border-green-100">
+              <h2 className="text-sm font-semibold text-green-700 flex items-center gap-1">
+                📞 Contact
+              </h2>
+              <p className="mt-1 text-gray-800">{farmer.phone}</p>
+              <p className="mt-1 text-gray-800">{farmer.email}</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
+export default FarmerProfilePage;

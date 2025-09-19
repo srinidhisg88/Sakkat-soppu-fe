@@ -11,6 +11,7 @@ import { HomePage } from './pages/HomePage';
 import { ProductsPage } from './pages/ProductsPage';
 import { ProductDetailsPage } from './pages/ProductDetailsPage';
 import { FarmerProfilePage } from './pages/FarmerProfilePage';
+import { FarmersPage } from './pages/FarmersPage';
 import { CartPage } from './pages/CartPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { OrdersPage } from './pages/OrdersPage';
@@ -26,6 +27,7 @@ import ScrollToTop from './components/ScrollToTop';
 import { AddToCartBarProvider } from './components/AddToCartBarProvider';
 import { StockProvider } from './context/StockContext';
 import LiveCartReconciler from './components/LiveCartReconciler';
+import { PoliciesModalProvider } from './components/PoliciesModalProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +49,7 @@ function App() {
           <Router>
             <AddToCartBarProvider>
             <StockProvider>
+            <PoliciesModalProvider whatsappNumber={'+91 9980761856'}>
             <div className="min-h-screen bg-cream-100 relative">
               {/* Always render app; splash overlays with a circular reveal */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
@@ -59,6 +62,8 @@ function App() {
                     {/* Public routes */}
                     <Route path="/" element={<HomePage startAnimations={splashDone} />} />
                     <Route path="/products" element={<ProductsPage />} />
+                    <Route path="/farmers" element={<FarmersPage />} />
+                    <Route path="/farmers/:id" element={<FarmerProfilePage />} />
                     <Route path="/products/:id" element={<ProductDetailsPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/signup" element={<SignupPage />} />
@@ -66,14 +71,6 @@ function App() {
                     <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                     {/* Protected routes */}
-                    <Route
-                      path="/farmers/:id"
-                      element={
-                        <RequireAuth>
-                          <FarmerProfilePage />
-                        </RequireAuth>
-                      }
-                    />
                     <Route
                       path="/cart"
                       element={
@@ -123,6 +120,7 @@ function App() {
                 <SplashScreen duration={1200} onFinish={() => setSplashDone(true)} />
               )}
             </div>
+            </PoliciesModalProvider>
             </StockProvider>
             </AddToCartBarProvider>
           </Router>
