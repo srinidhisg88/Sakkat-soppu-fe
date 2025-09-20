@@ -10,7 +10,6 @@ import {
   ShoppingCartIcon,
   ClipboardDocumentListIcon,
   ShieldCheckIcon,
-  UserGroupIcon,
   UserCircleIcon,
   ArrowRightOnRectangleIcon,
   Bars3Icon,
@@ -89,6 +88,8 @@ export function Navbar() {
               </Link>
             </motion.div>
 
+            {/** Farmers link hidden for now **/}
+            {/**
             <motion.div
               variants={navItemVariants}
               whileHover="hover"
@@ -99,6 +100,7 @@ export function Navbar() {
                 <span>Farmers</span>
               </Link>
             </motion.div>
+            **/}
 
             <motion.button
               variants={navItemVariants}
@@ -228,10 +230,13 @@ export function Navbar() {
                 <ClipboardDocumentListIcon className="h-5 w-5 text-green-600" />
                 <span>Orders</span>
               </Link>
+              {/** Farmers link hidden for now (mobile) **/}
+              {/**
               <Link onClick={() => setMobileOpen(false)} to="/farmers" className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-green-50">
                 <UserGroupIcon className="h-5 w-5 text-green-600" />
                 <span>Farmers</span>
               </Link>
+              **/}
               <button onClick={() => { setMobileOpen(false); policies.open(); }} className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-green-50 w-full text-left">
                 <ShieldCheckIcon className="h-5 w-5 text-green-600" />
                 <span>Policies</span>

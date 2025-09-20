@@ -2,17 +2,16 @@ import { useEffect, useState } from 'react';
 import { useLocation as useRouteLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile } from '../services/api';
-import { useLocation } from '../hooks/useLocation';
+import MapAddressModal from '../components/MapAddressModal';
 
 export function ProfilePage() {
   const { user, isAuthenticated, initializing, refreshProfile } = useAuth();
-  const { getLocation } = useLocation();
   const routeLocation = useRouteLocation();
   const promptComplete = ((routeLocation.state as unknown as { promptComplete?: boolean })?.promptComplete) || false;
   const [isEditing, setIsEditing] = useState<boolean>(promptComplete);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [locationConfirmed, setLocationConfirmed] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
@@ -46,20 +45,14 @@ export function ProfilePage() {
     }));
   };
 
-  const handleGetLocation = async () => {
-    try {
-      const coords = await getLocation();
-      setFormData(prev => ({
-        ...prev,
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-      }));
-  setSuccess('Location updated successfully');
-  setLocationConfirmed(true);
-    } catch (err) {
-      setError('Failed to get location');
-  setLocationConfirmed(false);
-    }
+  const handleMapConfirm = (data: { address: string; latitude: number; longitude: number }) => {
+    setFormData(prev => ({
+      ...prev,
+      address: data.address,
+      latitude: data.latitude,
+      longitude: data.longitude,
+    }));
+    setMapOpen(false);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -143,27 +136,25 @@ export function ProfilePage() {
               >
                 Address
               </label>
-              <input
-                id="address"
-                name="address"
-                type="text"
-                required
-                value={formData.address}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
+              <div className="flex items-center gap-2">
+                <textarea
+                  id="address"
+                  name="address"
+                  value={formData.address}
+                  readOnly
+                  rows={2}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                />
+                <button
+                  type="button"
+                  onClick={() => setMapOpen(true)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Edit on map
+                </button>
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleGetLocation}
-              className="w-full bg-green-100 text-green-800 py-2 px-4 rounded-lg font-medium hover:bg-green-200 mb-4"
-            >
-              Update My Location
-            </button>
-            {locationConfirmed && (
-              <p className="text-sm text-green-700 mb-2">Location confirmed</p>
-            )}
             {/* Coordinates hidden per requirement; still stored in formData for API */}
 
             <div className="flex space-x-4">
@@ -215,6 +206,13 @@ export function ProfilePage() {
           </div>
         )}
       </div>
+
+      <MapAddressModal
+        isOpen={mapOpen}
+        onClose={() => setMapOpen(false)}
+        onConfirm={handleMapConfirm}
+        defaultCenter={formData.latitude && formData.longitude ? { lat: formData.latitude, lon: formData.longitude } : null}
+      />
     </div>
   );
 }

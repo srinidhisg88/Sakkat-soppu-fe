@@ -6,7 +6,7 @@ import { Product } from '../types';
 import { getProducts } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
 import { usePoliciesModal } from '../components/PoliciesModalContext';
-import AboutFarmersSection from '../components/AboutFarmersSection';
+// import AboutFarmersSection from '../components/AboutFarmersSection';
 import {
   ShoppingBagIcon,
   SparklesIcon,
@@ -248,7 +248,8 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
           </button>
         </div>
 
-        {/* Farmers CTA */}
+        {/** Farmers CTA hidden for now **/}
+        {/**
         <div className="max-w-6xl mx-auto px-4 mt-12">
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-2xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -260,9 +261,10 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
             </a>
           </div>
         </div>
+        **/}
 
-        {/* About our farmers */}
-        <AboutFarmersSection />
+        {/** About our farmers hidden for now **/}
+        {/** <AboutFarmersSection /> **/}
     </div>
   );
 }

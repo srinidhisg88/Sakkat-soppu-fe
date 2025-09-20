@@ -10,8 +10,8 @@ import { CartProvider } from './context/CartContext';
 import { HomePage } from './pages/HomePage';
 import { ProductsPage } from './pages/ProductsPage';
 import { ProductDetailsPage } from './pages/ProductDetailsPage';
-import { FarmerProfilePage } from './pages/FarmerProfilePage';
-import { FarmersPage } from './pages/FarmersPage';
+// import { FarmerProfilePage } from './pages/FarmerProfilePage';
+// import { FarmersPage } from './pages/FarmersPage';
 import { CartPage } from './pages/CartPage';
 import { CheckoutPage } from './pages/CheckoutPage';
 import { OrdersPage } from './pages/OrdersPage';
@@ -62,8 +62,9 @@ function App() {
                     {/* Public routes */}
                     <Route path="/" element={<HomePage startAnimations={splashDone} />} />
                     <Route path="/products" element={<ProductsPage />} />
-                    <Route path="/farmers" element={<FarmersPage />} />
-                    <Route path="/farmers/:id" element={<FarmerProfilePage />} />
+                    {/** Farmers routes disabled for now **/}
+                    {/** <Route path="/farmers" element={<FarmersPage />} /> **/}
+                    {/** <Route path="/farmers/:id" element={<FarmerProfilePage />} /> **/}
                     <Route path="/products/:id" element={<ProductDetailsPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/signup" element={<SignupPage />} />

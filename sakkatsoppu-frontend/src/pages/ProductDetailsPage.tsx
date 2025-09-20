@@ -1,9 +1,9 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { useParams, Link, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
+import { useParams, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Product, Farmer, Category } from '../types';
+import { Product, /* Farmer, */ Category } from '../types';
 import { deriveUnitLabel, derivePriceForUnit, formatWeightFromGrams } from '../utils/format';
-import { getProduct, getFarmerById, getCategories } from '../services/api';
+import { getProduct, /* getFarmerById, */ getCategories } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
@@ -43,16 +43,16 @@ export function ProductDetailsPage() {
     staleTime: 10 * 60 * 1000,
   });
 
-  const { data: farmer, isLoading: farmerLoading } = useQuery<Farmer>({
-    queryKey: ['farmer', product?.farmerId],
-    enabled: !!product?.farmerId,
-    queryFn: async () => {
-      const fid = product?.farmerId;
-      if (!fid) throw new Error('No farmer id');
-      const res = await getFarmerById(fid as string);
-      return res.data;
-    },
-  });
+  // const { data: farmer, isLoading: farmerLoading } = useQuery<Farmer>({
+  //   queryKey: ['farmer', product?.farmerId],
+  //   enabled: !!product?.farmerId,
+  //   queryFn: async () => {
+  //     const fid = product?.farmerId;
+  //     if (!fid) throw new Error('No farmer id');
+  //     const res = await getFarmerById(fid as string);
+  //     return res.data as Farmer;
+  //   },
+  // });
 
   const handleAddToCart = async () => {
     if (!product) return;
@@ -407,7 +407,8 @@ export function ProductDetailsPage() {
             </>
           )}
 
-          {/* Farmer Info */}
+          {/** Farmer Info hidden for now **/}
+          {/**
           {farmer && !farmerLoading && (
             <div className="mt-8 p-4 bg-green-50 rounded-lg">
               <h2 className="text-xl font-semibold mb-2">About the Farmer</h2>
@@ -421,6 +422,7 @@ export function ProductDetailsPage() {
               <p className="text-gray-600 mt-1">{farmer.address}</p>
             </div>
           )}
+          **/}
         </div>
       </div>
 

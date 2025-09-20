@@ -58,8 +58,8 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
   // Address fields
   const [flatNo, setFlatNo] = useState('');
   const [landmark, setLandmark] = useState('');
-  const [city, setCity] = useState('');
-  const [stateName, setStateName] = useState('');
+  const [city, setCity] = useState('Mysore');
+  const [stateName, setStateName] = useState('Karnataka');
   const [pincode, setPincode] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -72,8 +72,7 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
     if (p.length === 0) return false; // optional; only validate when provided
     return !/^\d{6}$/.test(p);
   }, [pincode]);
-  const cityEmpty = (city || '').trim().length === 0;
-  const stateEmpty = (stateName || '').trim().length === 0;
+  // City and State are fixed; no emptiness checks required
 
   // Reverse geocode on marker move or initialization
   const reverse = useMemo(() => async (lat: number, lon: number) => {
@@ -105,8 +104,8 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
       setAddress('');
       setFlatNo('');
       setLandmark('');
-      setCity('');
-      setStateName('');
+  setCity('Mysore');
+  setStateName('Karnataka');
       setPincode('');
       setSearch('');
       setResults([]);
@@ -275,25 +274,19 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
               <label className="block text-sm text-gray-700 mb-1">City</label>
               <input
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md ${cityEmpty ? 'border-amber-300' : ''}`}
-                aria-invalid={cityEmpty}
+                readOnly
+                aria-readonly
+                className="w-full px-3 py-2 border rounded-md bg-gray-50 text-gray-700 cursor-not-allowed"
               />
-              {cityEmpty && (
-                <p className="mt-1 text-[11px] text-amber-600">Recommended: add a city</p>
-              )}
             </div>
             <div>
               <label className="block text-sm text-gray-700 mb-1">State</label>
               <input
                 value={stateName}
-                onChange={(e) => setStateName(e.target.value)}
-                className={`w-full px-3 py-2 border rounded-md ${stateEmpty ? 'border-amber-300' : ''}`}
-                aria-invalid={stateEmpty}
+                readOnly
+                aria-readonly
+                className="w-full px-3 py-2 border rounded-md bg-gray-50 text-gray-700 cursor-not-allowed"
               />
-              {stateEmpty && (
-                <p className="mt-1 text-[11px] text-amber-600">Recommended: add a state</p>
-              )}
             </div>
             <div>
               <label className="block text-sm text-gray-700 mb-1">Pincode</label>

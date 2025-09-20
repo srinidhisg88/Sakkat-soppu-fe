@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
+import { usePoliciesModal } from './PoliciesModalContext';
 
 export default function Footer() {
+  const policies = usePoliciesModal();
   const legacyLogoUrl = new URL('../../logo.jpeg', import.meta.url).href;
   const logoFinalUrl = new URL('../../logo_final.jpg', import.meta.url).href;
   return (
@@ -45,7 +47,7 @@ export default function Footer() {
             </nav>
           </div>
 
-          {/* Support (plain text, links disabled) */}
+          {/* Support */}
           <div>
             <h4 className="text-gray-900 font-semibold mb-1 sm:mb-2">Support</h4>
             <ul className="space-y-1 text-sm">
@@ -58,6 +60,16 @@ export default function Footer() {
                 <span className="inline-flex items-center gap-2 text-gray-700 select-text">
                   Phone: +91 99807 61856
                 </span>
+              </li>
+              <li>
+                <button
+                  type="button"
+                  onClick={() => policies.open()}
+                  className="inline-flex items-center gap-2 text-gray-700 select-text hover:text-green-700 focus:outline-none"
+                  style={{ background: 'none', border: 'none', padding: 0, font: 'inherit', cursor: 'pointer' }}
+                >
+                  Policies
+                </button>
               </li>
             </ul>
           </div>

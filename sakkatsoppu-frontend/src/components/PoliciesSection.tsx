@@ -28,7 +28,7 @@ export const PoliciesSection: React.FC<PoliciesSectionProps> = ({ id, compact = 
                 <span className="font-medium">No Return / Replacement:</span> We do not offer product returns or replacements once an order is delivered.
               </li>
               <li className={liClass}>
-                <span className="font-medium">Damaged Products:</span> If your product is delivered in a damaged condition, please share a clear photo of the product on our official WhatsApp number ({whatsApp}) within 24 hours of delivery.
+                <span className="font-medium">Damaged Products:</span> If your product is delivered in a damaged condition, please share a clear photo of the product on our official WhatsApp number ({whatsApp}) within 1 hour.
               </li>
               <li className={liClass}>
                 <span className="font-medium">Compensation:</span> After verification, we will provide a flat discount equal to the damage value on your next order.
@@ -49,11 +49,9 @@ export const PoliciesSection: React.FC<PoliciesSectionProps> = ({ id, compact = 
                 <span className="font-medium">Customer Availability:</span> Customers must ensure someone is available at the delivery address to collect the order.
               </li>
               <li className={liClass}>
-                <span className="font-medium">Missed Delivery:</span> If the customer is not present at the time of delivery, a QR code for payment will be sent to their registered mobile number. The full order amount must be paid via the QR code to confirm the order.
+                <span className="font-medium">Missed Delivery:</span> If the customer is not present at the time of delivery, a QR code for payment will be sent to their registered mobile number. The full order amount must be paid via the QR code.
               </li>
-              <li className={liClass}>
-                <span className="font-medium">Order Cancellation:</span> Orders can be cancelled within 24 hours of the order being placed.
-              </li>
+              
             </ul>
           </div>
         </div>
