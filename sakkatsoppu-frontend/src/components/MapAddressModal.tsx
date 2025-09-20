@@ -23,6 +23,7 @@ export type MapAddressModalProps = {
   onClose: () => void;
   onConfirm: (data: { address: string; latitude: number; longitude: number }) => void;
   defaultCenter?: LatLng | null; // preferred default from geolocation
+  autoGeo?: boolean; // whether to attempt browser geolocation on open when defaultCenter is absent
 };
 
 type SearchResult = {
@@ -49,11 +50,17 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lon: number) => void
   return null;
 }
 
-export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCenter }: MapAddressModalProps) {
+export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCenter, autoGeo = true }: MapAddressModalProps) {
   const mapKey = import.meta.env.VITE_MAPTILER_KEY as string | undefined;
   const [center, setCenter] = useState<LatLng | null>(defaultCenter || null);
   const [marker, setMarker] = useState<LatLng | null>(defaultCenter || null);
   const [address, setAddress] = useState('');
+  // Address fields
+  const [flatNo, setFlatNo] = useState('');
+  const [landmark, setLandmark] = useState('');
+  const [city, setCity] = useState('');
+  const [stateName, setStateName] = useState('');
+  const [pincode, setPincode] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
@@ -89,13 +96,18 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
       setCenter(initial);
       setMarker(initial);
       setAddress('');
+      setFlatNo('');
+      setLandmark('');
+      setCity('');
+      setStateName('');
+      setPincode('');
       setSearch('');
       setResults([]);
       setError(null);
       // Immediately get address for initial marker
       reverse(initial.lat, initial.lon);
       // Try to improve accuracy with geolocation when available
-      if (!defaultCenter && navigator.geolocation) {
+      if (autoGeo && !defaultCenter && navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
           (pos) => {
             const c = { lat: pos.coords.latitude, lon: pos.coords.longitude };
@@ -110,7 +122,7 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
         );
       }
     }
-  }, [isOpen, defaultCenter, reverse]);
+  }, [isOpen, defaultCenter, reverse, autoGeo]);
 
   // Forward geocoding (search)
   useEffect(() => {
@@ -167,8 +179,8 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg overflow-hidden">
+    <div className="fixed inset-0 z-[9999] flex items-start md:items-center justify-center bg-black/40 p-4 overflow-y-auto">
+      <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg border border-gray-200 mx-auto my-4 md:my-8 max-h-[92vh] overflow-y-auto">
         <div className="p-4 border-b flex items-center gap-2">
           <input
             type="text"
@@ -192,7 +204,7 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
             ))}
           </div>
         )}
-  <div className="h-[420px] relative min-h-[420px]">
+        <div className="relative h-64 md:h-[420px] min-h-[16rem]">
           {!mapKey && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90 text-center p-6">
               <div>
@@ -221,18 +233,72 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
             )}
           </MapContainer>
         </div>
-        <div className="p-4 border-t space-y-2">
+        <div className="p-4 border-t space-y-3">
           {error && <p className="text-sm text-red-600">{error}</p>}
-          <div>
-            <label className="block text-sm text-gray-700 mb-1">Address</label>
-            <textarea
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              rows={3}
-              className="w-full px-3 py-2 border rounded-md"
-              placeholder="Address from map or type manually"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Flat / House No.</label>
+              <input
+                value={flatNo}
+                onChange={(e) => setFlatNo(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md"
+                placeholder="e.g., 12A"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Landmark</label>
+              <input
+                value={landmark}
+                onChange={(e) => setLandmark(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md"
+                placeholder="Near park / temple / mall"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm text-gray-700 mb-1">Street / Area</label>
+              <textarea
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                rows={2}
+                className="w-full px-3 py-2 border rounded-md"
+                placeholder="Street name, locality"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">City</label>
+              <input
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md"
+                placeholder="Bengaluru"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">State</label>
+              <input
+                value={stateName}
+                onChange={(e) => setStateName(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md"
+                placeholder="Karnataka"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-700 mb-1">Pincode</label>
+              <input
+                value={pincode}
+                onChange={(e) => setPincode(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md"
+                placeholder="560001"
+                inputMode="numeric"
+                pattern="\\d{6}"
+                maxLength={6}
+              />
+            </div>
           </div>
+          {/* Composed preview */}
+          <p className="text-xs text-gray-600">
+            Preview: {[flatNo, address, landmark, city, stateName, pincode].filter(Boolean).join(', ')}
+          </p>
           <div className="flex items-center justify-between">
             <div className="text-xs text-gray-600">
               {marker ? (
@@ -245,11 +311,15 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
             <button
               onClick={() => {
                 if (!marker) return;
-                onConfirm({ address: address.trim(), latitude: marker.lat, longitude: marker.lon });
+                const composed = [flatNo, address, landmark, city, stateName, pincode]
+                  .map((s) => (s || '').trim())
+                  .filter((s) => s.length > 0)
+                  .join(', ');
+                onConfirm({ address: composed, latitude: marker.lat, longitude: marker.lon });
                 onClose();
               }}
-              disabled={!marker || address.trim().length === 0}
-              className={`px-4 py-2 rounded-md text-white ${!marker || address.trim().length === 0 ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+              disabled={!marker || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0)}
+              className={`px-4 py-2 rounded-md text-white ${!marker || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0) ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
             >
               Use this location
             </button>

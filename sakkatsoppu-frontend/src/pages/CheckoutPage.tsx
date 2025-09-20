@@ -8,7 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { createOrder, getCoupons, getPublicDeliverySettings, getProduct } from '../services/api';
-import { useLocation } from '../hooks/useLocation';
 // Drawer animations handled inside CouponDrawer
 import CouponDrawer from '../components/CouponDrawer';
 import MapAddressModal from '../components/MapAddressModal';
@@ -23,7 +22,6 @@ export function CheckoutPage() {
   const [reconcileEnabled, setReconcileEnabled] = useState(true);
   const { Banner } = useCartAutoReconcile({ enabled: reconcileEnabled, mutate: false });
   const navigate = useNavigate();
-  const { getLocation, error: locationError, loading: locating } = useLocation();
   const queryClient = useQueryClient();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -108,20 +106,7 @@ export function CheckoutPage() {
     }));
   };
 
-  const handleGetLocation = async () => {
-    try {
-      const coords = await getLocation();
-      setFormData(prev => ({
-        ...prev,
-        latitude: coords.latitude,
-        longitude: coords.longitude,
-      }));
-  setLocationConfirmed(true);
-    } catch (err) {
-      setError((err as Error).message || 'Failed to get location');
-  setLocationConfirmed(false);
-    }
-  };
+  // Removed device geolocation button per requirement; address can be set via map
 
   // Fetch coupons for validation
   type Coupon = {
@@ -509,15 +494,6 @@ export function CheckoutPage() {
 
             <button
               type="button"
-              onClick={handleGetLocation}
-              disabled={locating}
-              className={`w-full py-2 px-4 rounded-lg font-medium ${locating ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : 'bg-green-100 text-green-800 hover:bg-green-200'}`}
-            >
-              {locating ? 'Getting location...' : 'Use My Current Location'}
-            </button>
-
-            <button
-              type="button"
               onClick={() => setMapOpen(true)}
               className="w-full mt-2 py-2 px-4 rounded-lg font-medium bg-blue-100 text-blue-800 hover:bg-blue-200"
             >
@@ -525,12 +501,10 @@ export function CheckoutPage() {
             </button>
 
             {/* Coordinates hidden per requirement; still stored and sent to API */}
-            {locationConfirmed && !locationError && (
+            {locationConfirmed && (
               <p className="text-sm text-green-700">Location confirmed</p>
             )}
-            {locationError && (
-              <p className="text-sm text-red-600">{locationError}</p>
-            )}
+            {/* Removed device location error display */}
 
             {/* Coupon form */}
             <div className="border-t pt-4">
@@ -590,6 +564,7 @@ export function CheckoutPage() {
             isOpen={mapOpen}
             onClose={() => setMapOpen(false)}
             defaultCenter={defaultCenter}
+            autoGeo={false}
             onConfirm={(data) => {
               setFormData(prev => ({ ...prev, address: data.address, latitude: data.latitude, longitude: data.longitude }));
               setLocationConfirmed(true);
