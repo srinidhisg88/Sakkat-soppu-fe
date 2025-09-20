@@ -45,11 +45,14 @@ export function CheckoutPage() {
     address: user?.address || '',
     latitude: user?.latitude || 0,
     longitude: user?.longitude || 0,
+    phone: user?.phone || '',
   });
   const defaultCenter = useMemo(() => {
+    // Prefer user coords if available; else none and let modal autoGeo use device location
+    if (user?.latitude && user?.longitude) return { lat: user.latitude, lon: user.longitude };
     if (formData.latitude && formData.longitude) return { lat: formData.latitude, lon: formData.longitude };
     return null;
-  }, [formData.latitude, formData.longitude]);
+  }, [user?.latitude, user?.longitude, formData.latitude, formData.longitude]);
 
   // Delivery settings
   type DeliverySettings = {
@@ -206,6 +209,12 @@ export function CheckoutPage() {
       }
 
       // Client-side guards to avoid avoidable 400s
+      const phoneDigits = String(formData.phone || '').replace(/\D/g, '');
+      if (!phoneDigits || phoneDigits.length < 10) {
+        setError('Please enter a valid phone number.');
+        show('Please enter a valid phone number.', { type: 'warning' });
+        return;
+      }
       if (!formData.address || formData.address.trim().length === 0) {
         setError('Please enter your delivery address.');
         show('Please enter your delivery address.', { type: 'warning' });
@@ -264,6 +273,7 @@ export function CheckoutPage() {
       try {
         const res = await createOrder({
           ...formData,
+          phone: phoneDigits,
           paymentMode: 'COD',
           idempotencyKey: (globalThis.crypto?.randomUUID?.() || `${Date.now()}_${Math.random()}`),
           couponCode: appliedCoupon?.code?.trim() ? appliedCoupon.code.trim() : undefined,
@@ -357,6 +367,7 @@ export function CheckoutPage() {
           address: formData.address,
           latitude: formData.latitude,
           longitude: formData.longitude,
+          phone: phoneDigits,
           createdAt: new Date().toISOString(),
           paymentMode: 'COD',
           status: 'pending',
@@ -475,6 +486,27 @@ export function CheckoutPage() {
           )}
           <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
             <div>
+              <label
+                htmlFor="phone"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Phone Number
+              </label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                inputMode="numeric"
+                maxLength={10}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                placeholder=""
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">10-digit mobile number</p>
+            </div>
+            <div>
               <label 
                 htmlFor="address" 
                 className="block text-sm font-medium text-gray-700 mb-1"
@@ -564,7 +596,7 @@ export function CheckoutPage() {
             isOpen={mapOpen}
             onClose={() => setMapOpen(false)}
             defaultCenter={defaultCenter}
-            autoGeo={false}
+            autoGeo={true}
             onConfirm={(data) => {
               setFormData(prev => ({ ...prev, address: data.address, latitude: data.latitude, longitude: data.longitude }));
               setLocationConfirmed(true);

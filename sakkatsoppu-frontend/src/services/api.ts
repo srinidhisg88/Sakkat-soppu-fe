@@ -58,6 +58,7 @@ export const createOrder = (orderData: {
   paymentMode: 'COD';
   idempotencyKey: string;
   couponCode?: string;
+  phone?: string;
   items?: Array<{ productId: string; quantity: number }>; // optional: include cart items if backend requires
 }) => {
   const payload: Record<string, unknown> = { ...orderData };
@@ -69,6 +70,12 @@ export const createOrder = (orderData: {
   payload.couponCode = code; // Send only couponCode, per backend contract
   } else {
     delete payload.couponCode;
+  }
+  // Include phone if provided
+  if (typeof orderData.phone === 'string' && orderData.phone.trim() !== '') {
+    payload.phone = orderData.phone.trim();
+  } else {
+    delete payload.phone;
   }
   // Only include items if provided and non-empty
   if (Array.isArray(orderData.items) && orderData.items.length > 0) {
