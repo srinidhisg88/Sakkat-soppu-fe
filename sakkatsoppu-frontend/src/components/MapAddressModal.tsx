@@ -67,6 +67,13 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
   const [error, setError] = useState<string | null>(null);
   const debSearch = useDebounced(search, 450);
   const [mapSeed, setMapSeed] = useState(0);
+  const pinInvalid = useMemo(() => {
+    const p = (pincode || '').trim();
+    if (p.length === 0) return false; // optional; only validate when provided
+    return !/^\d{6}$/.test(p);
+  }, [pincode]);
+  const cityEmpty = (city || '').trim().length === 0;
+  const stateEmpty = (stateName || '').trim().length === 0;
 
   // Reverse geocode on marker move or initialization
   const reverse = useMemo(() => async (lat: number, lon: number) => {
@@ -179,8 +186,8 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-start md:items-center justify-center bg-black/40 p-4 overflow-y-auto">
-      <div className="w-full max-w-3xl bg-white rounded-xl shadow-lg border border-gray-200 mx-auto my-4 md:my-8 max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] flex items-stretch md:items-center justify-center bg-black/40 p-0 md:p-4 overflow-y-auto">
+      <div className="w-full md:max-w-3xl bg-white rounded-none md:rounded-xl shadow-lg border border-gray-200 mx-0 md:mx-auto my-0 md:my-8 h-screen md:max-h-[92vh] overflow-y-auto flex flex-col">
         <div className="p-4 border-b flex items-center gap-2">
           <input
             type="text"
@@ -204,7 +211,7 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
             ))}
           </div>
         )}
-        <div className="relative h-64 md:h-[420px] min-h-[16rem]">
+        <div className="relative h-72 md:h-[420px] min-h-[18rem]">
           {!mapKey && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90 text-center p-6">
               <div>
@@ -269,37 +276,52 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
               <input
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="Bengaluru"
+                className={`w-full px-3 py-2 border rounded-md ${cityEmpty ? 'border-amber-300' : ''}`}
+                aria-invalid={cityEmpty}
               />
+              {cityEmpty && (
+                <p className="mt-1 text-[11px] text-amber-600">Recommended: add a city</p>
+              )}
             </div>
             <div>
               <label className="block text-sm text-gray-700 mb-1">State</label>
               <input
                 value={stateName}
                 onChange={(e) => setStateName(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="Karnataka"
+                className={`w-full px-3 py-2 border rounded-md ${stateEmpty ? 'border-amber-300' : ''}`}
+                aria-invalid={stateEmpty}
               />
+              {stateEmpty && (
+                <p className="mt-1 text-[11px] text-amber-600">Recommended: add a state</p>
+              )}
             </div>
             <div>
               <label className="block text-sm text-gray-700 mb-1">Pincode</label>
               <input
                 value={pincode}
-                onChange={(e) => setPincode(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="560001"
+                onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className={`w-full px-3 py-2 border rounded-md ${pinInvalid ? 'border-red-400' : ''}`}
                 inputMode="numeric"
                 pattern="\\d{6}"
                 maxLength={6}
+                aria-invalid={pinInvalid}
               />
+              {pinInvalid && (
+                <p className="mt-1 text-[11px] text-red-600">Enter a valid 6-digit pincode</p>
+              )}
             </div>
           </div>
           {/* Composed preview */}
-          <p className="text-xs text-gray-600">
-            Preview: {[flatNo, address, landmark, city, stateName, pincode].filter(Boolean).join(', ')}
-          </p>
-          <div className="flex items-center justify-between">
+          <div className="text-xs text-gray-600">
+            <span className="font-medium">Preview:</span>
+            <div className="mt-1 whitespace-pre-line">
+              {[flatNo, address, landmark, city, stateName, pincode]
+                .map((s) => (s || '').trim())
+                .filter(Boolean)
+                .join('\n') || '—'}
+            </div>
+          </div>
+          <div className="sticky bottom-0 left-0 right-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:backdrop-blur border-t border-gray-200 -mx-4 px-4 pt-3 mt-2 flex items-center justify-between">
             <div className="text-xs text-gray-600">
               {marker ? (
                 <span>Lat: {marker.lat.toFixed(5)} • Lon: {marker.lon.toFixed(5)}</span>
@@ -318,8 +340,8 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
                 onConfirm({ address: composed, latitude: marker.lat, longitude: marker.lon });
                 onClose();
               }}
-              disabled={!marker || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0)}
-              className={`px-4 py-2 rounded-md text-white ${!marker || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0) ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+              disabled={!marker || pinInvalid || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0)}
+              className={`px-4 py-2 rounded-md text-white w-full md:w-auto ${!marker || pinInvalid || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0) ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
             >
               Use this location
             </button>
