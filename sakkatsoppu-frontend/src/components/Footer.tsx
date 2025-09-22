@@ -40,10 +40,6 @@ export default function Footer() {
               <Link to="/">Home</Link>
               <Link to="/products">Products</Link>
               <Link to="/orders">Orders</Link>
-              <Link to="/cart">Cart</Link>
-              <Link to="/profile">Profile</Link>
-              <Link to="/login">Login</Link>
-              <Link to="/signup">Sign Up</Link>
             </nav>
           </div>
 

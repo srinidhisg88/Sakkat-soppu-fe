@@ -13,7 +13,7 @@ import CouponDrawer from '../components/CouponDrawer';
 import MapAddressModal from '../components/MapAddressModal';
 
 export function CheckoutPage() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, refreshProfile } = useAuth();
   const { items, totalPrice, clearCart } = useCart();
   // Subscribe to cart items to receive live stock updates and auto-reconcile
   useStockSubscription(items.map(i => i.product._id));
@@ -603,7 +603,7 @@ export function CheckoutPage() {
             defaultCenter={defaultCenter}
             autoGeo={true}
             showSaveCheckbox={true}
-            initialAddress={user?.address}
+            initialAddress={formData.address}
             onConfirm={async (data) => {
               setFormData(prev => ({ ...prev, address: data.address, latitude: data.latitude, longitude: data.longitude }));
               setLocationConfirmed(true);
@@ -611,6 +611,7 @@ export function CheckoutPage() {
               if (data.saveToProfile) {
                 try {
                   await updateProfile({ address: data.address });
+                  await refreshProfile();
                   show('Address saved to your profile', { type: 'success' });
                 } catch (err) {
                   console.error('Failed to save address to profile:', err);
