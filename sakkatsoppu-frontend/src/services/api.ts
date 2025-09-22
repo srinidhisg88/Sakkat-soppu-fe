@@ -52,7 +52,14 @@ export const clearCartRemote = () => api.post('/cart/clear');
 // Orders
 export const getOrders = () => api.get('/orders');
 export const createOrder = (orderData: {
-  address: string;
+  address: {
+    houseNo: string;
+    landmark: string;
+    area: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
   latitude: number;
   longitude: number;
   paymentMode: 'COD';
@@ -119,7 +126,14 @@ export const getProfile = () => api.get('/users/profile');
 export const updateProfile = (userData: {
   name?: string;
   phone?: string;
-  address?: string;
+  address?: {
+    houseNo: string;
+    landmark: string;
+    area: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
   latitude?: number;
   longitude?: number;
 }) => api.put('/users/profile', userData);

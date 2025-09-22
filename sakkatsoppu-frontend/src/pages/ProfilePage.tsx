@@ -15,7 +15,16 @@ export function ProfilePage() {
   const [formData, setFormData] = useState({
     name: user?.name || '',
     phone: user?.phone || '',
-    address: user?.address || '',
+    address: (user?.address && typeof user.address === 'object' && 'houseNo' in user.address)
+      ? user.address
+      : {
+          houseNo: '',
+          landmark: '',
+          area: typeof user?.address === 'string' ? user.address : '',
+          city: 'Mysore',
+          state: 'Karnataka',
+          pincode: '',
+        },
     latitude: user?.latitude || 0,
     longitude: user?.longitude || 0,
   });
@@ -26,7 +35,16 @@ export function ProfilePage() {
       setFormData({
         name: user.name || '',
         phone: user.phone || '',
-        address: user.address || '',
+        address: (user.address && typeof user.address === 'object' && 'houseNo' in user.address)
+          ? user.address
+          : {
+              houseNo: '',
+              landmark: '',
+              area: typeof user.address === 'string' ? user.address : '',
+              city: 'Mysore',
+              state: 'Karnataka',
+              pincode: '',
+            },
         latitude: user.latitude || 0,
         longitude: user.longitude || 0,
       });
@@ -45,7 +63,7 @@ export function ProfilePage() {
     }));
   };
 
-  const handleMapConfirm = (data: { address: string; latitude: number; longitude: number }) => {
+  const handleMapConfirm = (data: { address: { houseNo: string; landmark: string; area: string; city: string; state: string; pincode: string }; latitude: number; longitude: number }) => {
     setFormData(prev => ({
       ...prev,
       address: data.address,
@@ -60,8 +78,27 @@ export function ProfilePage() {
     try {
       await updateProfile(formData);
       setSuccess('Profile updated successfully');
-  // Refresh auth user so read-only view is up-to-date
-  await refreshProfile();
+      // Refresh auth user so read-only view is up-to-date
+      await refreshProfile();
+      // After refresh, update formData with latest user values
+      if (user) {
+        setFormData({
+          name: user.name || '',
+          phone: user.phone || '',
+          address: (user.address && typeof user.address === 'object' && 'houseNo' in user.address)
+            ? user.address
+            : {
+                houseNo: '',
+                landmark: '',
+                area: typeof user.address === 'string' ? user.address : '',
+                city: 'Mysore',
+                state: 'Karnataka',
+                pincode: '',
+              },
+          latitude: user.latitude || 0,
+          longitude: user.longitude || 0,
+        });
+      }
       setIsEditing(false);
     } catch (err) {
       setError('Failed to update profile');
@@ -130,28 +167,26 @@ export function ProfilePage() {
             </div>
 
             <div>
-              <label 
-                htmlFor="address" 
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Address
               </label>
-              <div className="flex items-center gap-2">
-                <textarea
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  readOnly
-                  rows={2}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
-                />
-                <button
-                  type="button"
-                  onClick={() => setMapOpen(true)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Edit on map
-                </button>
+              <div className="space-y-2">
+                <div className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 min-h-[2.5rem]">
+                  {formData.address.houseNo || formData.address.area || formData.address.landmark || formData.address.city || formData.address.state || formData.address.pincode
+                    ? [formData.address.houseNo, formData.address.area, formData.address.landmark, formData.address.city, formData.address.state, formData.address.pincode]
+                        .filter(Boolean)
+                        .join(', ')
+                    : 'No address set'}
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setMapOpen(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    Edit on map
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -192,7 +227,15 @@ export function ProfilePage() {
 
             <div>
               <h2 className="text-sm font-medium text-gray-700">Address</h2>
-              <p className="mt-1">{user.address}</p>
+              <p className="mt-1">
+                {user.address && typeof user.address === 'object' && 'houseNo' in user.address
+                  ? [user.address.houseNo, user.address.area, user.address.landmark, user.address.city, user.address.state, user.address.pincode]
+                      .filter(Boolean)
+                      .join(', ')
+                  : typeof user.address === 'string'
+                  ? user.address
+                  : 'Not provided'}
+              </p>
             </div>
 
             {/* Coordinates hidden per requirement on read-only view */}
@@ -212,6 +255,7 @@ export function ProfilePage() {
         onClose={() => setMapOpen(false)}
         onConfirm={handleMapConfirm}
         defaultCenter={formData.latitude && formData.longitude ? { lat: formData.latitude, lon: formData.longitude } : null}
+        initialAddress={formData.address}
       />
     </div>
   );

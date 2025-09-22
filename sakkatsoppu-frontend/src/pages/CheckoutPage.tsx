@@ -7,14 +7,12 @@ import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { createOrder, getCoupons, getPublicDeliverySettings, getProduct } from '../services/api';
+import { createOrder, getCoupons, getPublicDeliverySettings, getProduct, updateProfile } from '../services/api';
 // Drawer animations handled inside CouponDrawer
 import CouponDrawer from '../components/CouponDrawer';
 import MapAddressModal from '../components/MapAddressModal';
-import { usePoliciesModal } from '../components/PoliciesModalContext';
 
 export function CheckoutPage() {
-  const policies = usePoliciesModal();
   const { user, isAuthenticated } = useAuth();
   const { items, totalPrice, clearCart } = useCart();
   // Subscribe to cart items to receive live stock updates and auto-reconcile
@@ -42,7 +40,14 @@ export function CheckoutPage() {
     isActive?: boolean;
   }>(null);
   const [formData, setFormData] = useState({
-    address: user?.address || '',
+    address: user?.address || {
+      houseNo: '',
+      landmark: '',
+      area: '',
+      city: 'Mysore',
+      state: 'Karnataka',
+      pincode: '',
+    },
     latitude: user?.latitude || 0,
     longitude: user?.longitude || 0,
     phone: user?.phone || '',
@@ -84,15 +89,25 @@ export function CheckoutPage() {
     staleTime: 10 * 60_000,
   });
 
-  // If user address becomes available later (e.g., after fetch), seed it once
+  // Always sync formData with latest user address/phone/coords when user changes
   useEffect(() => {
-    setFormData(prev => {
-      if (user?.address && !prev.address) {
-        return { ...prev, address: user.address };
-      }
-      return prev;
-    });
-  }, [user?.address]);
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        address: user.address || {
+          houseNo: '',
+          landmark: '',
+          area: '',
+          city: 'Mysore',
+          state: 'Karnataka',
+          pincode: '',
+        },
+        latitude: user.latitude || 0,
+        longitude: user.longitude || 0,
+        phone: user.phone || '',
+      }));
+    }
+  }, [user]);
 
   // Redirect to cart if no items
   useEffect(() => {
@@ -215,7 +230,7 @@ export function CheckoutPage() {
         show('Please enter a valid phone number.', { type: 'warning' });
         return;
       }
-      if (!formData.address || formData.address.trim().length === 0) {
+      if (!formData.address || [formData.address.houseNo, formData.address.area, formData.address.landmark, formData.address.city, formData.address.state, formData.address.pincode].every(field => !field || field.trim().length === 0)) {
         setError('Please enter your delivery address.');
         show('Please enter your delivery address.', { type: 'warning' });
         return;
@@ -463,17 +478,6 @@ export function CheckoutPage() {
               )}
             </div>
           </div>
-
-          {/* Policies at checkout */}
-          <div className="mt-10">
-            <button
-              type="button"
-              onClick={() => policies.open()}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 text-green-800 hover:bg-green-100 border border-green-200"
-            >
-              View Policies
-            </button>
-          </div>
         </div>
 
         {/* Delivery Details */}
@@ -517,10 +521,11 @@ export function CheckoutPage() {
                 id="address"
                 name="address"
                 required
-                value={formData.address}
+                value={[formData.address.houseNo, formData.address.area, formData.address.landmark, formData.address.city, formData.address.state, formData.address.pincode].filter(Boolean).join(', ')}
                 onChange={handleChange}
                 rows={3}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                readOnly
               />
             </div>
 
@@ -597,9 +602,21 @@ export function CheckoutPage() {
             onClose={() => setMapOpen(false)}
             defaultCenter={defaultCenter}
             autoGeo={true}
-            onConfirm={(data) => {
+            showSaveCheckbox={true}
+            initialAddress={user?.address}
+            onConfirm={async (data) => {
               setFormData(prev => ({ ...prev, address: data.address, latitude: data.latitude, longitude: data.longitude }));
               setLocationConfirmed(true);
+              
+              if (data.saveToProfile) {
+                try {
+                  await updateProfile({ address: data.address });
+                  show('Address saved to your profile', { type: 'success' });
+                } catch (err) {
+                  console.error('Failed to save address to profile:', err);
+                  show('Address updated for this order, but failed to save to profile', { type: 'warning' });
+                }
+              }
             }}
           />
         </div>

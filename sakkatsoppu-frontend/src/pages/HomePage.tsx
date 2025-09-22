@@ -5,7 +5,6 @@ import { Link } from 'react-router-dom';
 import { Product } from '../types';
 import { getProducts } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
-import { usePoliciesModal } from '../components/PoliciesModalContext';
 // import AboutFarmersSection from '../components/AboutFarmersSection';
 import {
   ShoppingBagIcon,
@@ -56,7 +55,6 @@ const itemVariants = {
 type HomePageProps = { startAnimations?: boolean };
 
 export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) => {
-  const policies = usePoliciesModal();
   const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: ['products', 'home-featured'],
     queryFn: async () => {
@@ -235,18 +233,6 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
           <div className="text-center py-12 text-gray-600">No products to show.</div>
         )}
       </section>
-
-      {/* Policies */}
-        {/* Policies trigger */}
-        <div className="max-w-6xl mx-auto px-4 mt-8">
-          <button
-            type="button"
-            onClick={() => policies.open()}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 text-green-800 hover:bg-green-100 border border-green-200"
-          >
-            View Policies
-          </button>
-        </div>
 
         {/** Farmers CTA hidden for now **/}
         {/**

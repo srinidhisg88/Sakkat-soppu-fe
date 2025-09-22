@@ -21,9 +21,31 @@ const FALLBACK_CENTER: LatLng = { lat: 12.9716, lon: 77.5946 };
 export type MapAddressModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (data: { address: string; latitude: number; longitude: number }) => void;
+  onConfirm: (data: { 
+    address: {
+      houseNo: string;
+      landmark: string;
+      area: string;
+      city: string;
+      state: string;
+      pincode: string;
+    }; 
+    latitude: number; 
+    longitude: number;
+    saveToProfile?: boolean;
+  }) => void;
   defaultCenter?: LatLng | null; // preferred default from geolocation
   autoGeo?: boolean; // whether to attempt browser geolocation on open when defaultCenter is absent
+  initialAddress?: {
+    houseNo: string;
+    landmark: string;
+    area: string;
+    city: string;
+    state: string;
+    pincode: string;
+  }; // initial address object to populate fields
+  showSaveCheckbox?: boolean;
+  saveCheckboxLabel?: string;
 };
 
 type SearchResult = {
@@ -50,7 +72,7 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lon: number) => void
   return null;
 }
 
-export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCenter, autoGeo = true }: MapAddressModalProps) {
+export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCenter, autoGeo = true, initialAddress, showSaveCheckbox = false, saveCheckboxLabel = "Save this address for next delivery" }: MapAddressModalProps) {
   const mapKey = import.meta.env.VITE_MAPTILER_KEY as string | undefined;
   const [center, setCenter] = useState<LatLng | null>(defaultCenter || null);
   const [marker, setMarker] = useState<LatLng | null>(defaultCenter || null);
@@ -65,6 +87,7 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [saveToProfile, setSaveToProfile] = useState(false);
   const debSearch = useDebounced(search, 450);
   const [mapSeed, setMapSeed] = useState(0);
   const pinInvalid = useMemo(() => {
@@ -101,17 +124,26 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
       const initial = defaultCenter || FALLBACK_CENTER;
       setCenter(initial);
       setMarker(initial);
-      setAddress('');
-      setFlatNo('');
-      setLandmark('');
-  setCity('Mysore');
-  setStateName('Karnataka');
-      setPincode('');
+      if (initialAddress) {
+        setFlatNo(initialAddress.houseNo || '');
+        setAddress(initialAddress.area || '');
+        setLandmark(initialAddress.landmark || '');
+        setCity(initialAddress.city || 'Mysore');
+        setStateName(initialAddress.state || 'Karnataka');
+        setPincode(initialAddress.pincode || '');
+      } else {
+        setAddress('');
+        setFlatNo('');
+        setLandmark('');
+        setCity('Mysore');
+        setStateName('Karnataka');
+        setPincode('');
+        // Immediately get address for initial marker
+        reverse(initial.lat, initial.lon);
+      }
       setSearch('');
       setResults([]);
       setError(null);
-      // Immediately get address for initial marker
-      reverse(initial.lat, initial.lon);
       // Try to improve accuracy with geolocation when available
       if (autoGeo && !defaultCenter && navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -128,7 +160,7 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
         );
       }
     }
-  }, [isOpen, defaultCenter, reverse, autoGeo]);
+  }, [isOpen, defaultCenter, reverse, autoGeo, initialAddress]);
 
   // Forward geocoding (search)
   useEffect(() => {
@@ -314,6 +346,20 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
                 .join('\n') || '—'}
             </div>
           </div>
+          {showSaveCheckbox && (
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="save-address"
+                checked={saveToProfile}
+                onChange={(e) => setSaveToProfile(e.target.checked)}
+                className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
+              />
+              <label htmlFor="save-address" className="text-sm text-gray-700">
+                {saveCheckboxLabel}
+              </label>
+            </div>
+          )}
           <div className="sticky bottom-0 left-0 right-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:backdrop-blur border-t border-gray-200 -mx-4 px-4 pt-3 mt-2 flex items-center justify-between">
             <div className="text-xs text-gray-600">
               {marker ? (
@@ -326,11 +372,15 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
             <button
               onClick={() => {
                 if (!marker) return;
-                const composed = [flatNo, address, landmark, city, stateName, pincode]
-                  .map((s) => (s || '').trim())
-                  .filter((s) => s.length > 0)
-                  .join(', ');
-                onConfirm({ address: composed, latitude: marker.lat, longitude: marker.lon });
+                const addressObj = {
+                  houseNo: flatNo.trim(),
+                  landmark: landmark.trim(),
+                  area: address.trim(),
+                  city: city.trim(),
+                  state: stateName.trim(),
+                  pincode: pincode.trim(),
+                };
+                onConfirm({ address: addressObj, latitude: marker.lat, longitude: marker.lon, saveToProfile });
                 onClose();
               }}
               disabled={!marker || pinInvalid || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0)}

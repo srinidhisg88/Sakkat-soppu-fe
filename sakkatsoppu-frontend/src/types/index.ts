@@ -81,7 +81,14 @@ export interface User {
   email: string;
   phone: string;
   role: 'user' | 'admin';
-  address: string;
+  address: {
+    houseNo: string;
+    landmark: string;
+    area: string;
+    city: string;
+    state: string;
+    pincode: string;
+  };
   latitude: number;
   longitude: number;
   cart: CartItem[];
