@@ -102,8 +102,8 @@ export function CheckoutPage() {
           state: 'Karnataka',
           pincode: '',
         },
-        latitude: user.latitude || 0,
-        longitude: user.longitude || 0,
+        latitude: prev.latitude && prev.latitude !== 0 ? prev.latitude : (user.latitude || 0),
+        longitude: prev.longitude && prev.longitude !== 0 ? prev.longitude : (user.longitude || 0),
         phone: user.phone || '',
       }));
     }
@@ -610,7 +610,7 @@ export function CheckoutPage() {
               
               if (data.saveToProfile) {
                 try {
-                  await updateProfile({ address: data.address });
+                  await updateProfile({ address: data.address, latitude: data.latitude, longitude: data.longitude });
                   await refreshProfile();
                   show('Address saved to your profile', { type: 'success' });
                 } catch (err) {
