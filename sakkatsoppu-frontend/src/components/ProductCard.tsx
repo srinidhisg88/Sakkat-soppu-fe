@@ -137,7 +137,7 @@ export function ProductCard({ product }: ProductCardProps) {
           </h3>
           <p className="text-[11px] sm:text-xs text-gray-600 mb-2 sm:mb-2.5 line-clamp-1 min-h-[14px] sm:min-h-[16px]">{product.category}</p>
           
-    <div className="flex items-center justify-between mb-4 gap-2">
+    <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2">
             <div>
               <span className="text-lg sm:text-xl font-bold text-green-600">₹{product.price}</span>
               {(() => {
@@ -182,43 +182,41 @@ export function ProductCard({ product }: ProductCardProps) {
 
           {/* Quantity / Add Controls */}
           {inCart ? (
-            <div className="mt-auto">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-700">In your cart</div>
-                <div className="flex items-center border rounded overflow-hidden">
-                  <button
-                    onClick={decCart}
-                    className="px-3 py-2 text-gray-600 hover:bg-gray-100"
-                    aria-label="Decrease quantity"
-                  >
-                    -
-                  </button>
-                  <span className="px-3 py-2 min-w-[2.5rem] text-center">{existingQty}</span>
-                  <button
-                    onClick={incCart}
-                    className="px-3 py-2 text-gray-600 hover:bg-gray-100"
-                    aria-label="Increase quantity"
-                  >
-                    +
-                  </button>
-                </div>
+            <div className="mt-3 sm:mt-4">
+              <div className="text-sm text-gray-700 mb-2">In your cart</div>
+              <div className="flex items-center border rounded-lg overflow-hidden">
+                <button
+                  onClick={decCart}
+                  className="px-3 py-2 text-gray-600 hover:bg-gray-100 active:scale-95"
+                  aria-label="Decrease quantity"
+                >
+                  -
+                </button>
+                <span className="px-3 py-2 min-w-[2.5rem] text-center font-medium">{existingQty}</span>
+                <button
+                  onClick={incCart}
+                  className="px-3 py-2 text-gray-600 hover:bg-gray-100 active:scale-95"
+                  aria-label="Increase quantity"
+                >
+                  +
+                </button>
               </div>
             </div>
           ) : (
-            <div className="mt-2 flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-3 min-w-0">
               {remaining > 0 && (
-                <div className="flex items-center border rounded overflow-hidden">
+                <div className="flex items-center border rounded-lg overflow-hidden">
                   <button
                     onClick={decDesired}
-                    className="px-3 py-2 text-gray-600 hover:bg-gray-100 active:scale-95"
+                    className="px-3 py-2.5 text-gray-600 hover:bg-gray-100 active:scale-95"
                     aria-label="Decrease quantity"
                   >
                     -
                   </button>
-                  <span className="px-3 py-2 min-w-[2.5rem] text-center">{qty}</span>
+                  <span className="px-4 py-2.5 min-w-[3rem] text-center font-medium">{qty}</span>
                   <button
                     onClick={incDesired}
-                    className="px-3 py-2 text-gray-600 hover:bg-gray-100 active:scale-95"
+                    className="px-3 py-2.5 text-gray-600 hover:bg-gray-100 active:scale-95"
                     aria-label="Increase quantity"
                   >
                     +
@@ -228,9 +226,9 @@ export function ProductCard({ product }: ProductCardProps) {
               <motion.button
                 onClick={handleAddToCart}
                 disabled={remaining <= 0}
-                whileHover={{ scale: 1.03 }}
+                whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className={`flex-1 min-w-0 overflow-hidden py-2 sm:py-2.5 px-3 sm:px-4 rounded-lg text-white font-medium flex items-center justify-center gap-1.5 sm:gap-2 transition-all duration-300 text-sm sm:text-base leading-5
+                className={`flex-1 min-w-0 py-2.5 sm:py-2.5 px-4 sm:px-4 rounded-lg text-white font-medium flex items-center justify-center gap-2 sm:gap-2 transition-all duration-300 text-sm sm:text-base leading-5
                   ${
                     remaining > 0
                       ? 'bg-green-600 hover:bg-green-700 shadow-md hover:shadow-lg'

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import type { AxiosError } from 'axios';
 import { Product, Category } from '../types';
-import { getCategories, getProducts } from '../services/api';
+import { getPublicCategories, getProducts } from '../services/api';
 import { deriveUnitLabel, derivePriceForUnit } from '../utils/format';
 import { useStockSubscription } from '../hooks/useStockSubscription';
 import { useCart } from '../context/CartContext';
@@ -129,27 +129,16 @@ export function ProductsPage() {
   }, [allEnabled]);
 
   // Load categories from backend to support new normalized model
-  const { data: categories = [] } = useQuery<Category[]>({
+    const { data: categories = [] } = useQuery<Category[]>({
     queryKey: ['categories', 'list'],
     queryFn: async () => {
-      const res = await getCategories();
-      type CatEnvelope = { data?: Category[]; categories?: Category[] } | Category[];
-      const payload = res.data as CatEnvelope;
+      const res = await getPublicCategories();
+      const payload = res.data;
       return (Array.isArray(payload) ? payload : payload?.data ?? payload?.categories ?? []) as Category[];
     },
-    staleTime: 10 * 60 * 1000,
-    retry: (failureCount, error: unknown) => {
-      const status = (error as AxiosError)?.response?.status;
-      if (status === 429) return failureCount < 1;
-      return failureCount < 2;
-    },
-    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
-  refetchOnMount: false,
-  refetchOnWindowFocus: false,
-  refetchOnReconnect: false,
-  });
-
-  const catMap = useMemo(() => {
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    cacheTime: 10 * 60 * 1000, // 10 minutes
+  });  const catMap = useMemo(() => {
     const m = new Map<string, Category>();
     categories.forEach(c => m.set(c._id, c));
     return m;
@@ -272,7 +261,18 @@ export function ProductsPage() {
             <FunnelIcon className="h-5 w-5 text-gray-400 absolute left-3 top-3" />
             <select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === 'All') {
+                  setSelectedCategory('All');
+                } else {
+                  // Find the category ID and navigate to category page
+                  const category = categories.find(cat => cat.name === value);
+                  if (category) {
+                    navigate(`/categories/${category._id}`);
+                  }
+                }
+              }}
               className="w-full pl-10 pr-3 sm:pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent appearance-none"
             >
               {categoryOptions.map((name) => (
@@ -327,7 +327,6 @@ export function ProductsPage() {
             variants={containerVariants}
             initial={false}
             animate="visible"
-            // Mobile: 2 columns like reference; tablet 3, desktop 4 (from lg)
             className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6"
           >
       {displayedProducts.map((product: Product, idx: number) => (

@@ -1,14 +1,5 @@
 import { motion } from 'framer-motion';
 import React from 'react';
-import { Link } from 'react-router-dom';
-import {
-  HeartIcon,
-  SparklesIcon,
-  TruckIcon,
-  UsersIcon,
-  ShieldCheckIcon,
-  BeakerIcon,
-} from '@heroicons/react/24/outline';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -45,13 +36,13 @@ const AboutUsPage: React.FC = () => {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.h1
             variants={itemVariants}
-            className="text-4xl md:text-6xl font-bold mb-6"
+            className="text-3xl sm:text-4xl md:text-6xl font-bold mb-6"
           >
             About Sakkat Soppu
           </motion.h1>
           <motion.p
             variants={itemVariants}
-            className="text-xl md:text-2xl opacity-90 max-w-3xl mx-auto"
+            className="text-lg sm:text-xl md:text-2xl opacity-90 max-w-3xl mx-auto px-4"
           >
             Connecting you directly with local farmers for the freshest, most sustainable produce
           </motion.p>
@@ -68,160 +59,76 @@ const AboutUsPage: React.FC = () => {
           className="space-y-16"
         >
 
-          {/* Mission Section */}
+          {/* Our Story */}
           <motion.div variants={itemVariants} className="text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
-              Our Mission
+              Our Story
             </h2>
             <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
-              <p className="text-lg md:text-xl text-gray-700 leading-relaxed max-w-4xl mx-auto">
-                At Sakkat Soppu, we believe in creating a sustainable food ecosystem that benefits everyone.
-                We're bridging the gap between local farmers and conscious consumers, ensuring fair prices
-                for farmers while delivering exceptional quality to your doorstep.
+              <p className="text-lg md:text-xl text-gray-700 leading-relaxed">
+                Sakkath Soppu is a Mysore-based farmers' collective that started in 2022 with a simple vision – to connect farmers directly with families and bring back trust, freshness, and honesty into our food system.
               </p>
             </div>
           </motion.div>
 
-          {/* What We Offer */}
+          {/* Our Growth */}
           <motion.div variants={itemVariants}>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 text-center mb-12">
-              What We Offer
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 text-center mb-8">
+              Our Growth
             </h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
               <motion.div
                 whileHover={{ scale: 1.05 }}
-                className="bg-white rounded-xl shadow-lg p-6 text-center"
+                className="flex justify-center order-2 md:order-1"
               >
-                <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                  <BeakerIcon className="h-8 w-8 text-green-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Fresh Organic Produce</h3>
-                <p className="text-gray-600">
-                  Handpicked vegetables and greens sourced directly from local organic farms,
-                  ensuring maximum freshness and nutritional value.
-                </p>
+                <img
+                  src="/sakkat_soppu.jpeg"
+                  alt="Sakkat Soppu - Fresh Organic Produce"
+                  className="w-full max-w-md h-auto rounded-2xl shadow-lg object-cover"
+                />
               </motion.div>
-
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="bg-white rounded-xl shadow-lg p-6 text-center"
-              >
-                <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                  <TruckIcon className="h-8 w-8 text-green-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Reliable Delivery</h3>
-                <p className="text-gray-600">
-                  Convenient doorstep delivery on Sundays and Mondays, timed perfectly
-                  to bring you the freshest produce when you need it most.
+              <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12 order-1 md:order-2">
+                <p className="text-lg md:text-xl text-gray-700 leading-relaxed">
+                  What began as a small offline initiative with just 5 farmers has today grown into a strong network of 50+ organic farmers, all committed to delivering fresh, chemical-free produce straight from their fields.
                 </p>
-              </motion.div>
-
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                className="bg-white rounded-xl shadow-lg p-6 text-center"
-              >
-                <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                  <UsersIcon className="h-8 w-8 text-green-600" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-3">Farmer Support</h3>
-                <p className="text-gray-600">
-                  Supporting over 50 local farmers with fair pricing and sustainable practices,
-                  building stronger communities through ethical agriculture.
-                </p>
-              </motion.div>
-            </div>
-          </motion.div>
-
-          {/* Why Choose Us */}
-          <motion.div variants={itemVariants}>
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 text-center mb-12">
-              Why Choose Sakkat Soppu?
-            </h2>
-            <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-8 md:p-12">
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-6">
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-green-100 rounded-full p-2 flex-shrink-0">
-                      <SparklesIcon className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Premium Quality</h3>
-                      <p className="text-gray-700">
-                        Every product undergoes strict quality checks to ensure you receive
-                        only the best organic produce available.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-green-100 rounded-full p-2 flex-shrink-0">
-                      <HeartIcon className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Health Focused</h3>
-                      <p className="text-gray-700">
-                        Nutrient-rich, pesticide-free vegetables that support your healthy lifestyle
-                        and contribute to better overall wellness.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-green-100 rounded-full p-2 flex-shrink-0">
-                      <ShieldCheckIcon className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Sustainable Practices</h3>
-                      <p className="text-gray-700">
-                        Committed to eco-friendly farming methods that protect our environment
-                        and promote long-term agricultural sustainability.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-4">
-                    <div className="bg-green-100 rounded-full p-2 flex-shrink-0">
-                      <UsersIcon className="h-6 w-6 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Community Driven</h3>
-                      <p className="text-gray-700">
-                        Building stronger local communities by connecting consumers directly
-                        with farmers and supporting regional agriculture.
-                      </p>
-                    </div>
-                  </div>
-                </div>
               </div>
             </div>
           </motion.div>
 
-          {/* Call to Action */}
-          <motion.div
-            variants={itemVariants}
-            className="text-center bg-gradient-to-r from-green-600 to-green-500 rounded-2xl p-8 md:p-12 text-white"
-          >
-            <h2 className="text-2xl md:text-3xl font-bold mb-4">
-              Join Our Community
+          {/* Our Community */}
+          <motion.div variants={itemVariants} className="text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
+              Our Community
             </h2>
-            <p className="text-lg md:text-xl opacity-90 mb-8 max-w-2xl mx-auto">
-              Experience the difference that fresh, local, organic produce can make in your life.
-              Start your journey towards healthier eating today.
-            </p>
-            <Link
-              to="/products"
-              className="inline-flex items-center px-8 py-3 bg-white text-green-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Shop Now
-              <motion.div
-                whileHover={{ x: 5 }}
-                className="ml-2"
-              >
-                →
-              </motion.div>
-            </Link>
+            <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-8 md:p-12">
+              <p className="text-lg md:text-xl text-gray-700 leading-relaxed max-w-4xl mx-auto">
+                In this journey, Sakkath Soppu has built a customer base of 5,000+ households, with 300–500 people visiting the weekly farmers' sante (market) to pick up seasonal fruits, vegetables, greens, and other farm products freshly harvested for them.
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Our Impact */}
+          <motion.div variants={itemVariants}>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 text-center mb-8">
+              Our Impact
+            </h2>
+            <div className="bg-white rounded-2xl shadow-lg p-8 md:p-12">
+              <p className="text-lg md:text-xl text-gray-700 leading-relaxed max-w-4xl mx-auto">
+                By choosing Sakkath Soppu, you not only bring the best of nature to your plate but also support a sustainable ecosystem where farmers are fairly rewarded, middlemen are eliminated, and customers can shop with complete confidence in the source of their food.
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Going Online */}
+          <motion.div variants={itemVariants} className="text-center">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
+              Going Online
+            </h2>
+            <div className="bg-gradient-to-r from-green-600 to-green-500 rounded-2xl p-8 md:p-12 text-white">
+              <p className="text-lg md:text-xl opacity-90 leading-relaxed max-w-4xl mx-auto">
+                And now, with Sakkath Soppu going online, this trusted farmers' market experience is being extended right to your doorstep, making it easier than ever to access farm-fresh, local, and organic produce with just a few clicks.
+              </p>
+            </div>
           </motion.div>
 
         </motion.div>

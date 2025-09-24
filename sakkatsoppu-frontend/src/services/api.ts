@@ -30,6 +30,9 @@ export const getFarmerProducts = (farmerId: string) => api.get(`/products/farmer
 
 // Categories
 export const getCategories = () => api.get('/admin/categories');
+export const getPublicCategories = () => api.get('/public/categories');
+export const getProductsByCategory = (categoryId: string, params?: { page?: number; limit?: number }) =>
+  api.get(`/public/categories/${categoryId}/products`, { params });
 export const getCoupons = (params?: { page?: number; limit?: number; search?: string }) => api.get('/public/coupons', { params });
 export const getPublicCoupons = (params?: { page?: number; limit?: number; search?: string }) => api.get('/coupons', { params });
 // Delivery settings (public)

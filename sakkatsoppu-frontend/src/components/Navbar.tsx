@@ -225,6 +225,10 @@ export function Navbar() {
                 <ShoppingBagIcon className="h-5 w-5 text-green-600" />
                 <span>Products</span>
               </Link>
+              <Link onClick={() => setMobileOpen(false)} to="/about" className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-green-50">
+                <InformationCircleIcon className="h-5 w-5 text-green-600" />
+                <span>About Us</span>
+              </Link>
               <Link onClick={() => setMobileOpen(false)} to="/orders" className="flex items-center gap-2 py-2 px-3 rounded-lg hover:bg-green-50">
                 <ClipboardDocumentListIcon className="h-5 w-5 text-green-600" />
                 <span>Orders</span>
