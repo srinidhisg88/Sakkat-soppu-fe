@@ -254,7 +254,7 @@ export function ProfilePage() {
         isOpen={mapOpen}
         onClose={() => setMapOpen(false)}
         onConfirm={handleMapConfirm}
-        defaultCenter={formData.latitude && formData.longitude ? { lat: formData.latitude, lon: formData.longitude } : null}
+        defaultCenter={formData.latitude && formData.longitude && formData.latitude !== 0 && formData.longitude !== 0 ? { lat: formData.latitude, lon: formData.longitude } : null}
         initialAddress={formData.address}
       />
     </div>

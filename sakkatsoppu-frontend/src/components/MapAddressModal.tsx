@@ -16,7 +16,7 @@ delete L.Icon.Default.prototype._getIconUrl;
 Icon.Default.mergeOptions({ iconRetinaUrl, iconUrl, shadowUrl });
 
 type LatLng = { lat: number; lon: number };
-const FALLBACK_CENTER: LatLng = { lat: 12.9716, lon: 77.5946 };
+const FALLBACK_CENTER: LatLng = { lat: 12.2958, lon: 76.6394 };
 
 export type MapAddressModalProps = {
   isOpen: boolean;
@@ -156,7 +156,7 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
             setMapSeed((s) => s + 1);
           },
           undefined,
-          { enableHighAccuracy: true, maximumAge: 30000, timeout: 5000 }
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
         );
       }
     }
