@@ -1,12 +1,22 @@
 {
-  "name": "Sakkat Soppu",
-  "short_name": "SakkatSoppu",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#16a34a",
+  "name": "Sakkat Soppu - Fresh from Farmers",
+  "short_name": "Sakkat Soppu",
+  "description": "Fresh organic produce delivered straight from farmers to your doorstep",
   "icons": [
-    { "src": "/logo_final.jpg", "type": "image/jpeg", "sizes": "192x192" },
-    { "src": "/logo_final.jpg", "type": "image/jpeg", "sizes": "512x512" }
-  ]
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#22c55e",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/"
 }
