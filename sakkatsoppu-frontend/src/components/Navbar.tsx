@@ -12,6 +12,7 @@ import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
+  InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 
 export function Navbar() {
@@ -82,6 +83,17 @@ export function Navbar() {
               <Link to="/products" className="flex items-center space-x-1 py-2 px-3 rounded-lg group-hover:bg-green-50 transition-colors">
                 <ShoppingBagIcon className="h-5 w-5 text-green-600" />
                 <span>Products</span>
+              </Link>
+            </motion.div>
+
+            <motion.div
+              variants={navItemVariants}
+              whileHover="hover"
+              className="relative group"
+            >
+              <Link to="/about" className="flex items-center space-x-1 py-2 px-3 rounded-lg group-hover:bg-green-50 transition-colors">
+                <InformationCircleIcon className="h-5 w-5 text-green-600" />
+                <span>About Us</span>
               </Link>
             </motion.div>
 

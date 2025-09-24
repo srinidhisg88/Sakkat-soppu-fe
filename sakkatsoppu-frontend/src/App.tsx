@@ -21,6 +21,7 @@ import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import AboutUsPage from './pages/AboutUsPage';
 import { ToastProvider } from './components/ToastProvider';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
@@ -62,6 +63,7 @@ function App() {
                     {/* Public routes */}
                     <Route path="/" element={<HomePage startAnimations={splashDone} />} />
                     <Route path="/products" element={<ProductsPage />} />
+                    <Route path="/about" element={<AboutUsPage />} />
                     {/** Farmers routes disabled for now **/}
                     {/** <Route path="/farmers" element={<FarmersPage />} /> **/}
                     {/** <Route path="/farmers/:id" element={<FarmerProfilePage />} /> **/}
