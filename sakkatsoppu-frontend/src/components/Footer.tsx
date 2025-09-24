@@ -29,7 +29,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-gray-600 text-xs sm:text-sm">
-              Fresh, local produce delivered in and around Mysore.
+              Fresh, local produce delivered in Mysore.
             </p>
           </div>
 
