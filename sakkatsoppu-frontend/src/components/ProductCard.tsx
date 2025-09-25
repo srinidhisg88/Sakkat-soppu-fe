@@ -116,8 +116,6 @@ export function ProductCard({ product }: ProductCardProps) {
             src={product.imageUrl || (product.images && product.images[0]) || '/placeholder.png'}
             alt={product.name}
             loading="lazy"
-            width="400"
-            height="300"
             className="absolute inset-0 w-full h-full object-cover"
             whileHover={{ scale: 1.03 }}
             transition={{ duration: 0.3 }}
