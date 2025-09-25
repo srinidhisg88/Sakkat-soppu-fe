@@ -142,7 +142,7 @@ export function AddToCartBarProvider({ children }: { children: React.ReactNode }
 
   // If we navigate to the cart page (e.g., by pressing View Cart), hide and prevent re-open
   useEffect(() => {
-    if (location.pathname === '/cart') {
+    if (location.pathname === '/cart' || location.pathname === '/checkout' || location.pathname === '/about') {
       if (timerRef.current) window.clearTimeout(timerRef.current);
       setOpen(false);
     }
@@ -161,7 +161,7 @@ export function AddToCartBarProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     const c = Array.isArray(items) ? items.length : 0;
     setCount(c);
-    if (c > 0 && location.pathname !== '/cart') setOpen(true);
+    if (c > 0 && location.pathname !== '/cart' && location.pathname !== '/checkout' && location.pathname !== '/about') setOpen(true);
   }, [items, location.pathname]);
 
   const value = useMemo<Ctx>(() => ({ showBar }), [showBar]);
