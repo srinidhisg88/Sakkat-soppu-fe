@@ -7,7 +7,11 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "routes": [
-    { "src": "/(.*)\\.(js|css|png|jpg|jpeg|gif|svg|ico|json|txt|woff|woff2|ttf)", "dest": "/$1.$2" },
-    { "src": "/.*", "dest": "/index.html" }
+    { "src": "/sitemap.xml", "dest": "/sitemap.xml", "headers": { "Content-Type": "application/xml; charset=utf-8" } },
+    { "src": "/robots.txt", "dest": "/robots.txt", "headers": { "Content-Type": "text/plain; charset=utf-8" } },
+    { "src": "/site.webmanifest", "dest": "/site.webmanifest", "headers": { "Content-Type": "application/manifest+json; charset=utf-8" } },
+    { "src": "/favicon.ico", "dest": "/favicon.ico" },
+    { "src": "/(.*)\\.(js|css|png|jpg|jpeg|gif|svg|ico|json|txt|woff|woff2|ttf|webmanifest)", "dest": "/$1.$2" },
+    { "src": "/.*", "dest": "/index.html", "headers": { "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' https: data:; connect-src 'self' https:; media-src 'self'; object-src 'none'; frame-src 'none';" } }
   ]
 }
