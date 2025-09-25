@@ -49,7 +49,7 @@ export default function FarmerCard({ farmer }: { farmer: FarmerCardItem }) {
       {/* Cover */}
       <div className="relative w-full h-48 sm:h-56 bg-gray-50">
         {media[current].type === 'image' ? (
-          <img src={media[current].src} alt={farmer.farmName || farmer.name} className="w-full h-full object-cover group-hover:scale-[1.02] transition" />
+          <img src={media[current].src} alt={farmer.farmName || farmer.name} width="400" height="224" className="w-full h-full object-cover group-hover:scale-[1.02] transition" />
         ) : (
           <video
             src={media[current].src}
@@ -94,7 +94,7 @@ export default function FarmerCard({ farmer }: { farmer: FarmerCardItem }) {
                   aria-label="Preview media"
                 >
                   {m.type === 'image' ? (
-                    <img src={m.src} alt="preview" className="w-full h-full object-cover" />
+                    <img src={m.src} alt="preview" width="48" height="48" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-gray-200 flex items-center justify-center">
                       <PlayCircleIcon className="h-6 w-6 text-gray-600" />

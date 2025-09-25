@@ -214,6 +214,8 @@ export function ProductDetailsPage() {
             <img
               src={mainImage}
               alt={product.name}
+              width="600"
+              height="600"
               className="absolute inset-0 w-full h-full object-contain"
             />
             {galleryImages.length > 1 && (
@@ -254,6 +256,8 @@ export function ProductDetailsPage() {
                     <img
                       src={image}
                       alt={`${product.name} ${index + 1}`}
+                      width="80"
+                      height="80"
                       className="w-full h-full object-cover"
                     />
                     {active && (

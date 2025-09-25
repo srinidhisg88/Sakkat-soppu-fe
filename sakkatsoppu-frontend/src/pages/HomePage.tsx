@@ -94,6 +94,8 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
                 <img
                   src={heroLogo}
                   alt="Sakkat Soppu logo"
+                  width="160"
+                  height="160"
                   className="w-full h-full object-contain"
                 />
               </div>

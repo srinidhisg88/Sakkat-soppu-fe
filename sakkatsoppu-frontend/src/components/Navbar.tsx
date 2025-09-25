@@ -46,6 +46,8 @@ export function Navbar() {
               <img
                 src={logoFinalUrl}
                 alt="Sakkat Soppu logo"
+                width="48"
+                height="48"
                 className="w-full h-full object-contain"
                 onError={(e) => {
                   const img = e.currentTarget as HTMLImageElement;

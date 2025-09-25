@@ -9,17 +9,23 @@
 
   html {
     scroll-behavior: smooth;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
     @apply bg-cream-100;
     font-display: swap;
     text-rendering: optimizeSpeed;
+    font-feature-settings: "kern" 1, "liga" 1;
   }
 
   img {
     max-width: 100%;
     height: auto;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
   }
 }
 

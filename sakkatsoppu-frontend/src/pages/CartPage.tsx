@@ -91,6 +91,8 @@ export function CartPage() {
               <img
                 src={item.product.imageUrl}
                 alt={item.product.name}
+                width="96"
+                height="96"
                 className="w-full sm:w-24 h-40 sm:h-24 object-cover rounded"
               />
               <div className="flex-grow min-w-0">

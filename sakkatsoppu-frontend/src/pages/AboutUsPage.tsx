@@ -84,6 +84,8 @@ const AboutUsPage: React.FC = () => {
                 <img
                   src="/sakkat_soppu.jpeg"
                   alt="Sakkat Soppu - Fresh Organic Produce"
+                  width="448"
+                  height="336"
                   className="w-full max-w-md h-auto rounded-2xl shadow-lg object-cover"
                 />
               </motion.div>

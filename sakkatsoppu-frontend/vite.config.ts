@@ -14,6 +14,12 @@ export default defineConfig({
     viteCompression({
       algorithm: 'gzip',
       ext: '.gz',
+      threshold: 1024, // Only compress files larger than 1KB
+    }),
+    viteCompression({
+      algorithm: 'brotliCompress',
+      ext: '.br',
+      threshold: 1024,
     }),
     visualizer({
       filename: 'dist/stats.html',
@@ -43,10 +49,15 @@ export default defineConfig({
       compress: {
         drop_console: true,
         drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
       },
     },
     cssCodeSplit: true,
     sourcemap: false,
+    // Optimize assets
+    assetsInlineLimit: 4096, // Inline assets smaller than 4KB
+    // Enable CSS minification
+    cssMinify: true,
   },
   server: {
     port: 3000,

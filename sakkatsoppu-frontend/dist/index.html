@@ -7,6 +7,8 @@
     <link rel="dns-prefetch" href="//fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" href="/assets/logo_final-b879f40a.jpg" as="image" type="image/jpeg">
+    <link rel="preload" href="/favicon.ico" as="image" type="image/x-icon">
 
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
@@ -74,12 +76,15 @@
     <link
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
-    />
-    <script type="module" crossorigin src="/assets/index-3e3efc5f.js"></script>
+      media="print"
+      onload="this.media='all'"
+    >
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"></noscript>
+    <script type="module" crossorigin src="/assets/index-afee60cc.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/react-vendor-e826ac9a.js">
     <link rel="modulepreload" crossorigin href="/assets/ui-vendor-090db037.js">
     <link rel="modulepreload" crossorigin href="/assets/data-vendor-7193eb6f.js">
-    <link rel="stylesheet" href="/assets/index-ce09b6af.css">
+    <link rel="stylesheet" href="/assets/index-bf1aa7f8.css">
     <script type="module">import.meta.url;import("_").catch(()=>1);async function* g(){};if(location.protocol!="file:"){window.__vite_is_modern_browser=true}</script>
     <script type="module">!function(){if(window.__vite_is_modern_browser)return;console.warn("vite: loading legacy chunks, syntax error above and the same error below should be ignored");var e=document.getElementById("vite-legacy-polyfill"),n=document.createElement("script");n.src=e.src,n.onload=function(){System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))},document.body.appendChild(n)}();</script>
   </head>
@@ -115,6 +120,6 @@
     
     <script nomodule>!function(){var e=document,t=e.createElement("script");if(!("noModule"in t)&&"onbeforeload"in t){var n=!1;e.addEventListener("beforeload",(function(e){if(e.target===t)n=!0;else if(!e.target.hasAttribute("nomodule")||!n)return;e.preventDefault()}),!0),t.type="module",t.src=".",e.head.appendChild(t),t.remove()}}();</script>
     <script nomodule crossorigin id="vite-legacy-polyfill" src="/assets/polyfills-legacy-122018dd.js"></script>
-    <script nomodule crossorigin id="vite-legacy-entry" data-src="/assets/index-legacy-fe97776e.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
+    <script nomodule crossorigin id="vite-legacy-entry" data-src="/assets/index-legacy-54a78176.js">System.import(document.getElementById('vite-legacy-entry').getAttribute('data-src'))</script>
   </body>
 </html>

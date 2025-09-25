@@ -16,6 +16,8 @@ export default function Footer() {
                 <img
                   src={logoFinalUrl}
                   alt="Sakkat Soppu logo"
+                  width="36"
+                  height="36"
                   className="w-full h-full object-contain"
                   onError={(e) => {
                     const img = e.currentTarget as HTMLImageElement;
