@@ -5,10 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "generate-sitemap": "node scripts/generate-sitemap.js",
     "build": "npm run generate-sitemap && tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "generate-sitemap": "node scripts/generate-sitemap.js"
+    
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
