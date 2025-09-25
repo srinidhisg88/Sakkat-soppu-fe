@@ -11,7 +11,7 @@
     { "src": "/robots.txt", "dest": "/robots.txt", "headers": { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "public, max-age=3600" } },
     { "src": "/site.webmanifest", "dest": "/site.webmanifest", "headers": { "Content-Type": "application/manifest+json; charset=utf-8", "Cache-Control": "public, max-age=3600" } },
     { "src": "/favicon.ico", "dest": "/favicon.ico", "headers": { "Cache-Control": "public, max-age=31536000" } },
-    { "src": "/(.*)\\.(js|css|png|jpg|jpeg|gif|svg|ico|json|txt|woff|woff2|ttf|webmanifest)", "dest": "/$1.$2", "headers": { "Cache-Control": "public, max-age=31536000, immutable" } },
-    { "src": "/.*", "dest": "/index.html", "headers": { "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' https: data:; connect-src 'self' https:; media-src 'self'; object-src 'none'; frame-src 'none';" } }
+    { "src": "/(.*)\\.(js|css|png|jpg|jpeg|gif|svg|ico|json|txt|woff|woff2|ttf|eot|webmanifest|webp|avif)", "dest": "/$1.$2", "headers": { "Cache-Control": "public, max-age=31536000, immutable" } },
+    { "src": "/.*", "dest": "/index.html", "headers": { "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https: wss:; media-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none';" } }
   ]
 }
