@@ -1,28 +1,29 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, Suspense, lazy } from 'react';
 import { motion } from 'framer-motion';
 import { Navbar } from './components/Navbar';
 import RequireAuth from './components/RequireAuth';
 import SplashScreen from './components/SplashScreen';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
-import { HomePage } from './pages/HomePage';
-import { ProductsPage } from './pages/ProductsPage';
-import { ProductDetailsPage } from './pages/ProductDetailsPage';
-// import { FarmerProfilePage } from './pages/FarmerProfilePage';
-// import { FarmersPage } from './pages/FarmersPage';
-import { CartPage } from './pages/CartPage';
-import { CheckoutPage } from './pages/CheckoutPage';
-import { OrdersPage } from './pages/OrdersPage';
-import OrderDetailsPage from './pages/OrderDetailsPage';
-import { ProfilePage } from './pages/ProfilePage';
-import { LoginPage } from './pages/LoginPage';
-import { SignupPage } from './pages/SignupPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import ResetPasswordPage from './pages/ResetPasswordPage';
-import AboutUsPage from './pages/AboutUsPage';
-import { CategoryPage } from './pages/CategoryPage';
+
+// Lazy load all pages for better performance
+const HomePage = lazy(() => import('./pages/HomePage').then(module => ({ default: module.HomePage })));
+const ProductsPage = lazy(() => import('./pages/ProductsPage').then(module => ({ default: module.ProductsPage })));
+const ProductDetailsPage = lazy(() => import('./pages/ProductDetailsPage').then(module => ({ default: module.ProductDetailsPage })));
+const CartPage = lazy(() => import('./pages/CartPage').then(module => ({ default: module.CartPage })));
+const CheckoutPage = lazy(() => import('./pages/CheckoutPage').then(module => ({ default: module.CheckoutPage })));
+const OrdersPage = lazy(() => import('./pages/OrdersPage').then(module => ({ default: module.OrdersPage })));
+const OrderDetailsPage = lazy(() => import('./pages/OrderDetailsPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then(module => ({ default: module.ProfilePage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(module => ({ default: module.LoginPage })));
+const SignupPage = lazy(() => import('./pages/SignupPage').then(module => ({ default: module.SignupPage })));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const AboutUsPage = lazy(() => import('./pages/AboutUsPage'));
+const CategoryPage = lazy(() => import('./pages/CategoryPage').then(module => ({ default: module.CategoryPage })));
+
 import { ToastProvider } from './components/ToastProvider';
 import Footer from './components/Footer';
 import ScrollToTop from './components/ScrollToTop';
@@ -60,63 +61,69 @@ function App() {
                 <LiveCartReconciler />
                 <Navbar />
                 <main className="container mx-auto px-4 py-8">
-                  <Routes>
-                    {/* Public routes */}
-                    <Route path="/" element={<HomePage startAnimations={splashDone} />} />
-                    <Route path="/products" element={<ProductsPage />} />
-                    <Route path="/categories/:categoryId" element={<CategoryPage />} />
-                    <Route path="/about" element={<AboutUsPage />} />
-                    {/** Farmers routes disabled for now **/}
-                    {/** <Route path="/farmers" element={<FarmersPage />} /> **/}
-                    {/** <Route path="/farmers/:id" element={<FarmerProfilePage />} /> **/}
-                    <Route path="/products/:id" element={<ProductDetailsPage />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/signup" element={<SignupPage />} />
-                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-                    <Route path="/reset-password" element={<ResetPasswordPage />} />
+                  <Suspense fallback={
+                    <div className="flex items-center justify-center min-h-[400px]">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+                    </div>
+                  }>
+                    <Routes>
+                      {/* Public routes */}
+                      <Route path="/" element={<HomePage startAnimations={splashDone} />} />
+                      <Route path="/products" element={<ProductsPage />} />
+                      <Route path="/categories/:categoryId" element={<CategoryPage />} />
+                      <Route path="/about" element={<AboutUsPage />} />
+                      {/** Farmers routes disabled for now **/}
+                      {/** <Route path="/farmers" element={<FarmersPage />} /> **/}
+                      {/** <Route path="/farmers/:id" element={<FarmerProfilePage />} /> **/}
+                      <Route path="/products/:id" element={<ProductDetailsPage />} />
+                      <Route path="/login" element={<LoginPage />} />
+                      <Route path="/signup" element={<SignupPage />} />
+                      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                      <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-                    {/* Protected routes */}
-                    <Route
-                      path="/cart"
-                      element={
-                        <RequireAuth>
-                          <CartPage />
-                        </RequireAuth>
-                      }
-                    />
-                    <Route
-                      path="/checkout"
-                      element={
-                        <RequireAuth>
-                          <CheckoutPage />
-                        </RequireAuth>
-                      }
-                    />
-                    <Route
-                      path="/orders"
-                      element={
-                        <RequireAuth>
-                          <OrdersPage />
-                        </RequireAuth>
-                      }
-                    />
-                    <Route
-                      path="/orders/:id"
-                      element={
-                        <RequireAuth>
-                          <OrderDetailsPage />
-                        </RequireAuth>
-                      }
-                    />
-                    <Route
-                      path="/profile"
-                      element={
-                        <RequireAuth>
-                          <ProfilePage />
-                        </RequireAuth>
-                      }
-                    />
-                  </Routes>
+                      {/* Protected routes */}
+                      <Route
+                        path="/cart"
+                        element={
+                          <RequireAuth>
+                            <CartPage />
+                          </RequireAuth>
+                        }
+                      />
+                      <Route
+                        path="/checkout"
+                        element={
+                          <RequireAuth>
+                            <CheckoutPage />
+                          </RequireAuth>
+                        }
+                      />
+                      <Route
+                        path="/orders"
+                        element={
+                          <RequireAuth>
+                            <OrdersPage />
+                          </RequireAuth>
+                        }
+                      />
+                      <Route
+                        path="/orders/:id"
+                        element={
+                          <RequireAuth>
+                            <OrderDetailsPage />
+                          </RequireAuth>
+                        }
+                      />
+                      <Route
+                        path="/profile"
+                        element={
+                          <RequireAuth>
+                            <ProfilePage />
+                          </RequireAuth>
+                        }
+                      />
+                    </Routes>
+                  </Suspense>
                 </main>
                 <Footer />
               </motion.div>

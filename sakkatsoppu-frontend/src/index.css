@@ -3,8 +3,23 @@
 @tailwind utilities;
 
 @layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-cream-100;
+    font-display: swap;
+    text-rendering: optimizeSpeed;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
   }
 }
 

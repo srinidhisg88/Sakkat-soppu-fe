@@ -115,7 +115,8 @@ export function ProductCard({ product }: ProductCardProps) {
           <motion.img
             src={product.imageUrl || (product.images && product.images[0]) || '/placeholder.png'}
             alt={product.name}
-                className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover"
             whileHover={{ scale: 1.03 }}
             transition={{ duration: 0.3 }}
           />
