@@ -21,7 +21,6 @@ export function useCartAutoReconcile(opts?: { enabled?: boolean; mutate?: boolea
       if ((globalThis as unknown as { __RECONCILE_PAUSED?: boolean }).__RECONCILE_PAUSED) return;
     } catch (e) {
       if (import.meta.env.DEV) {
-        // eslint-disable-next-line no-console
         console.debug('Reconcile pause check failed', e);
       }
     }

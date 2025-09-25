@@ -218,7 +218,6 @@ export function CheckoutPage() {
         (globalThis as unknown as { __RECONCILE_PAUSED?: boolean }).__RECONCILE_PAUSED = true;
       } catch (e) {
         if (import.meta.env.DEV) {
-          // eslint-disable-next-line no-console
           console.debug('Failed to set reconcile pause flag', e);
         }
       }
@@ -323,7 +322,6 @@ export function CheckoutPage() {
         const data = axiosErr?.response?.data;
         if (import.meta.env.DEV && data) {
           // Surface server error payload to dev console for quick diagnosis
-          // eslint-disable-next-line no-console
           console.debug('Order creation error payload:', data);
         }
         if (typeof status === 'number') {
@@ -408,7 +406,6 @@ export function CheckoutPage() {
     (globalThis as unknown as { __RECONCILE_PAUSED?: boolean }).__RECONCILE_PAUSED = false;
   } catch (e) {
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
       console.debug('Failed to clear reconcile pause flag', e);
     }
   }
