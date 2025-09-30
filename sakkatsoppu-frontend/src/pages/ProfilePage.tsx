@@ -184,7 +184,7 @@ export function ProfilePage() {
                     onClick={() => setMapOpen(true)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                   >
-                    Edit on map
+                    Edit address
                   </button>
                 </div>
               </div>
@@ -256,6 +256,7 @@ export function ProfilePage() {
         onConfirm={handleMapConfirm}
         defaultCenter={formData.latitude && formData.longitude && formData.latitude !== 0 && formData.longitude !== 0 ? { lat: formData.latitude, lon: formData.longitude } : null}
         initialAddress={formData.address}
+        showMap={false}
       />
     </div>
   );

@@ -46,6 +46,7 @@ export type MapAddressModalProps = {
   }; // initial address object to populate fields
   showSaveCheckbox?: boolean;
   saveCheckboxLabel?: string;
+  showMap?: boolean; // whether to show the map component
 };
 
 type SearchResult = {
@@ -72,7 +73,7 @@ function ClickHandler({ onClick }: { onClick: (lat: number, lon: number) => void
   return null;
 }
 
-export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCenter, autoGeo = true, initialAddress, showSaveCheckbox = false, saveCheckboxLabel = "Save this address for next delivery" }: MapAddressModalProps) {
+export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCenter, autoGeo = true, initialAddress, showSaveCheckbox = false, saveCheckboxLabel = "Save this address for next delivery", showMap = true }: MapAddressModalProps) {
   const mapKey = import.meta.env.VITE_MAPTILER_KEY as string | undefined;
   const [center, setCenter] = useState<LatLng | null>(defaultCenter || null);
   const [marker, setMarker] = useState<LatLng | null>(defaultCenter || null);
@@ -242,35 +243,37 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
             ))}
           </div>
         )}
-        <div className="relative h-72 md:h-[420px] min-h-[18rem]">
-          {!mapKey && (
-            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90 text-center p-6">
-              <div>
-                <p className="font-semibold">Map key missing</p>
-                <p className="text-sm text-gray-600 mt-1">Set VITE_MAPTILER_KEY in your environment to load the map.</p>
+        {showMap && (
+          <div className="relative h-72 md:h-[420px] min-h-[18rem]">
+            {!mapKey && (
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/90 text-center p-6">
+                <div>
+                  <p className="font-semibold">Map key missing</p>
+                  <p className="text-sm text-gray-600 mt-1">Set VITE_MAPTILER_KEY in your environment to load the map.</p>
+                </div>
               </div>
-            </div>
-          )}
-          <MapContainer
-            center={center ? [center.lat, center.lon] as [number, number] : [12.9716, 77.5946]}
-            zoom={center ? 15 : 12}
-            style={{ height: '100%', width: '100%' }}
-            key={mapSeed}
-          >
-            <TileLayer
-              url={`https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=${mapKey || 'no-key'}`}
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a>'
-            />
-            <ClickHandler onClick={onMapClick} />
-            {marker && (
-              <Marker
-                position={[marker.lat, marker.lon]}
-                draggable
-                eventHandlers={{ dragend: markerDragEnd }}
-              />
             )}
-          </MapContainer>
-        </div>
+            <MapContainer
+              center={center ? [center.lat, center.lon] as [number, number] : [12.9716, 77.5946]}
+              zoom={center ? 15 : 12}
+              style={{ height: '100%', width: '100%' }}
+              key={mapSeed}
+            >
+              <TileLayer
+                url={`https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key=${mapKey || 'no-key'}`}
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a>'
+              />
+              <ClickHandler onClick={onMapClick} />
+              {marker && (
+                <Marker
+                  position={[marker.lat, marker.lon]}
+                  draggable
+                  eventHandlers={{ dragend: markerDragEnd }}
+                />
+              )}
+            </MapContainer>
+          </div>
+        )}
         <div className="p-4 border-t space-y-3">
           {error && <p className="text-sm text-red-600">{error}</p>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -362,16 +365,23 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
           )}
           <div className="sticky bottom-0 left-0 right-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:backdrop-blur border-t border-gray-200 -mx-4 px-4 pt-3 mt-2 flex items-center justify-between">
             <div className="text-xs text-gray-600">
-              {marker ? (
-                <span>Lat: {marker.lat.toFixed(5)} • Lon: {marker.lon.toFixed(5)}</span>
+              {showMap ? (
+                marker ? (
+                  <span>Lat: {marker.lat.toFixed(5)} • Lon: {marker.lon.toFixed(5)}</span>
+                ) : (
+                  <span>Select a point on the map</span>
+                )
               ) : (
-                <span>Select a point on the map</span>
+                <span>Enter address details manually</span>
               )}
               {loading && <span className="ml-2">· Loading…</span>}
             </div>
             <button
               onClick={() => {
-                if (!marker) return;
+                // Use default coordinates if map is disabled
+                const finalLat = showMap && marker ? marker.lat : (defaultCenter?.lat || FALLBACK_CENTER.lat);
+                const finalLon = showMap && marker ? marker.lon : (defaultCenter?.lon || FALLBACK_CENTER.lon);
+                
                 const addressObj = {
                   houseNo: flatNo.trim(),
                   landmark: landmark.trim(),
@@ -380,13 +390,13 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
                   state: stateName.trim(),
                   pincode: pincode.trim(),
                 };
-                onConfirm({ address: addressObj, latitude: marker.lat, longitude: marker.lon, saveToProfile });
+                onConfirm({ address: addressObj, latitude: finalLat, longitude: finalLon, saveToProfile });
                 onClose();
               }}
-              disabled={!marker || pinInvalid || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0)}
-              className={`px-4 py-2 rounded-md text-white w-full md:w-auto ${!marker || pinInvalid || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0) ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+              disabled={pinInvalid || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0)}
+              className={`px-4 py-2 rounded-md text-white w-full md:w-auto ${pinInvalid || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0) ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
             >
-              Use this location
+              {showMap ? 'Use this location' : 'Save address'}
             </button>
           </div>
         </div>

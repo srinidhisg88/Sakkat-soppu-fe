@@ -531,7 +531,7 @@ export function CheckoutPage() {
               onClick={() => setMapOpen(true)}
               className="w-full mt-2 py-2 px-4 rounded-lg font-medium bg-blue-100 text-blue-800 hover:bg-blue-200"
             >
-              Set address on map
+              Edit address
             </button>
 
             {/* Coordinates hidden per requirement; still stored and sent to API */}
@@ -601,6 +601,7 @@ export function CheckoutPage() {
             autoGeo={true}
             showSaveCheckbox={true}
             initialAddress={formData.address}
+            showMap={false}
             onConfirm={async (data) => {
               setFormData(prev => ({ ...prev, address: data.address, latitude: data.latitude, longitude: data.longitude }));
               setLocationConfirmed(true);
