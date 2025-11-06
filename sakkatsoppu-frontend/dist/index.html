@@ -35,6 +35,9 @@
     <title>Sakkat Soppu - Fresh from Farmers</title>
     <meta name="description" content="Fresh organic produce delivered straight from farmers to your doorstep. Supporting Mysore farmers with fair pricing and sustainable practices." />
 
+  <!-- Development-time CSP: mirrors server header so media from Cloud Storage/Cloudinary is allowed locally -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://accounts.google.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https: blob:; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https: wss:; media-src 'self' https://commondatastorage.googleapis.com https://res.cloudinary.com https:; object-src 'none'; frame-src 'none'; frame-ancestors 'none';" />
+
     <!-- Open Graph for rich previews -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Sakkat Soppu - Fresh from Farmers" />
