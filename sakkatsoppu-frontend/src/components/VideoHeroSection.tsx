@@ -380,10 +380,10 @@ export const VideoHeroSection: React.FC<VideoHeroSectionProps> = ({ startAnimati
 
           {/* Enhanced Video Player - Top on Mobile, Right on Desktop */}
           <motion.div
-            initial={{ opacity: 0, x: 40 }}
-            animate={startAnimations ? { opacity: 1, x: 0 } : { opacity: 0, x: 40 }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={startAnimations ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
             transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
-            className="order-1 lg:order-2 w-full flex items-center justify-center"
+            className="order-1 lg:order-2 w-full flex items-center justify-center mb-6 lg:mb-0"
           >
             {/* Decorative frame container for desktop */}
             <div className="relative w-full lg:w-auto">
@@ -391,13 +391,14 @@ export const VideoHeroSection: React.FC<VideoHeroSectionProps> = ({ startAnimati
               <div className="hidden lg:block absolute -inset-6 bg-gradient-to-br from-emerald-400 via-green-500 to-teal-500 rounded-3xl blur-3xl opacity-30 animate-pulse" style={{ zIndex: 0 }} />
 
               <div
-                className="relative w-full lg:w-64 xl:w-72 lg:rounded-3xl overflow-hidden shadow-2xl lg:ring-4 lg:ring-white/50"
+                className="relative w-full lg:w-64 xl:w-72 overflow-hidden shadow-2xl lg:rounded-3xl lg:ring-4 lg:ring-white/50"
                 onMouseEnter={() => setShowControls(true)}
                 onMouseLeave={() => setShowControls(false)}
                 onTouchStart={() => setShowControls(true)}
                 onTouchEnd={() => setTimeout(() => setShowControls(false), 3000)}
                 style={{
                   aspectRatio: '9 / 16',
+                  maxHeight: '80vh',
                   boxShadow: '0 25px 60px -15px rgba(16, 185, 129, 0.4), 0 0 30px rgba(16, 185, 129, 0.1)',
                   zIndex: 1
                 }}
