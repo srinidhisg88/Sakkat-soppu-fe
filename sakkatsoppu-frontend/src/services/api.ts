@@ -38,6 +38,9 @@ export const getPublicCoupons = (params?: { page?: number; limit?: number; searc
 // Delivery settings (public)
 export const getPublicDeliverySettings = () => api.get('/public/settings/delivery');
 
+// Homepage videos (public)
+export const getHomepageVideos = () => api.get('/public/homepage-videos');
+
 // Farmers
 export const getFarmers = (params?: { page?: number; limit?: number; q?: string }) =>
   api.get('/farmer', { params });

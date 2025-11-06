@@ -53,7 +53,7 @@ function App() {
             <AddToCartBarProvider>
             <StockProvider>
             <PoliciesModalProvider whatsappNumber={'+91 9980761856'}>
-            <div className="min-h-screen bg-cream-100 relative">
+            <div className="min-h-screen relative">
               {/* Always render app; splash overlays with a circular reveal */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
                 <ScrollToTop />

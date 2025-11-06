@@ -1,20 +1,16 @@
 import { motion } from 'framer-motion';
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
 import { Product } from '../types';
 import { getProducts } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
+import { VideoHeroSection } from '../components/VideoHeroSection';
 // import AboutFarmersSection from '../components/AboutFarmersSection';
 import {
-  ShoppingBagIcon,
   SparklesIcon,
   CalendarDaysIcon,
   UserGroupIcon,
 } from '@heroicons/react/24/outline';
-
-// Resolve logo asset (prefer public path for simplicity)
-const heroLogo = new URL('../../logo_final.jpg', import.meta.url).href;
 
 const features = [
   {
@@ -75,95 +71,8 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
 
   return (
     <div className="space-y-16 pb-16">
-      {/* Hero Section */}
-      <motion.section
-        className="relative bg-gradient-to-r from-green-600 to-green-400 text-white py-24 px-4 rounded-3xl mx-4 overflow-hidden"
-      >
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={startAnimations ? { scale: 1, opacity: 0.1 } : { scale: 0.95, opacity: 0 }}
-          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute inset-0 bg-[url('/pattern.svg')] bg-center"
-        />
-        
-        <div className="max-w-6xl mx-auto relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            {/* Left: Title/Logo/CTA */}
-            <div className="text-center lg:text-left order-1">
-              <div className="mx-auto lg:mx-0 mb-6 w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-white shadow p-2 overflow-hidden">
-                <img
-                  src={heroLogo}
-                  alt="Sakkat Soppu logo"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-
-              <motion.div
-                variants={{
-                  hidden: { opacity: 1 },
-                  visible: {
-                    opacity: 1,
-                    transition: { staggerChildren: 0.15, delayChildren: 0.1 }
-                  }
-                }}
-                initial="hidden"
-                animate={startAnimations ? 'visible' : 'hidden'}
-              >
-                <motion.h1
-                  variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                  className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4"
-                >
-                  Fresh from Farmers,
-                  <br />
-                  Straight to You
-                </motion.h1>
-
-                <motion.p
-                  variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                  className="text-xl md:text-2xl mb-8 text-green-100"
-                >
-                  Supporting local farmers while bringing you the freshest organic produce
-                </motion.p>
-
-                <motion.div
-                  variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                >
-                  <Link
-                    to="/products"
-                    className="inline-flex items-center space-x-2 bg-white text-green-600 px-8 py-4 rounded-full font-semibold hover:bg-green-50 transform hover:scale-105 transition-all shadow-lg"
-                  >
-                    <ShoppingBagIcon className="h-5 w-5" />
-                    <span>Shop Now</span>
-                  </Link>
-                </motion.div>
-              </motion.div>
-            </div>
-
-            {/* Right: Trust/Quote card */}
-    <motion.aside
-              initial={{ opacity: 0, x: 40 }}
-              animate={startAnimations ? { opacity: 1, x: 0 } : { opacity: 0, x: 40 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1], delay: 0.15 }}
-              className="order-2 lg:order-2 w-full max-w-sm mx-auto lg:ml-auto"
-            >
-              <div className="relative">
-                <div className="absolute -inset-0.5 rounded-3xl bg-gradient-to-br from-white/40 to-transparent blur-md" />
-                <div className="relative rounded-3xl border border-white/30 bg-white/90 text-green-800 shadow-2xl p-6">
-      <p className="text-2xl font-extrabold tracking-tight">
-                    Trusted by 5000+ people
-                  </p>
-                  <p className="mt-1 text-sm text-green-700/80">
-                    Farm‑fresh goodness loved by our community.
-                  </p>
-                </div>
-              </div>
-            </motion.aside>
-          </div>
-        </div>
-      </motion.section>
+      {/* Video Hero Section */}
+      <VideoHeroSection startAnimations={startAnimations} />
 
       {/* Features */}
       <motion.section

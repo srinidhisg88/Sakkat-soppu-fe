@@ -46,6 +46,13 @@ export interface Farmer {
   role: 'farmer';
 }
 
+export interface HomepageVideo {
+  _id: string;
+  title: string;
+  videoUrl: string;
+  displayOrder: number;
+}
+
 export interface OrderItem {
   productId: string;
   quantity: number;
