@@ -151,7 +151,7 @@ export function CartPage() {
                   dragConstraints={{ left: -200, right: 0 }}
                   dragElastic={0.2}
                   onDragStart={() => setSwipingItemId(item.product._id)}
-                  onDragEnd={(e, info) => handleSwipe(item.product._id, info)}
+                  onDragEnd={(_e, info) => handleSwipe(item.product._id, info)}
                   className="relative bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
                 >
                   {/* Delete background (shown when swiping) */}
