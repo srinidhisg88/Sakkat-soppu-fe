@@ -7,14 +7,17 @@ import { EmptyState } from '../components/EmptyState';
 import { useStockSubscription } from '../hooks/useStockSubscription';
 import { useStockContext } from '../context/StockContext';
 import { useCartAutoReconcile } from '../hooks/useCartAutoReconcile';
-import { formatWeightFromGrams } from '../utils/format';
-// import { useAuth } from '../context/AuthContext';
+import { deriveUnitLabel, derivePriceForUnit } from '../utils/format';
+import { ArrowLeftIcon, TrashIcon, ArrowLongLeftIcon } from '@heroicons/react/24/outline';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { useState } from 'react';
 
 export function CartPage() {
   const { items, totalPrice, updateQuantity, removeItem, loading } = useCart();
-  // const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const { show } = useToast();
+  const [swipingItemId, setSwipingItemId] = useState<string | null>(null);
+
   // Public delivery settings
   type DeliverySettings = {
     enabled: boolean;
@@ -64,178 +67,260 @@ export function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <EmptyState
-          title="Your Cart is Empty"
-          description="Browse our products and add some items to your cart."
-          actionLabel="Browse Products"
-          actionTo="/products"
-          icon={<span>🧺</span>}
-        />
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white shadow-sm sticky top-0 z-10">
+          <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-4">
+            <button
+              onClick={() => navigate('/')}
+              className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="Go back to home"
+            >
+              <ArrowLeftIcon className="h-6 w-6 text-gray-700" />
+            </button>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">My Cart</h1>
+          </div>
+        </div>
+
+        <div className="max-w-2xl mx-auto px-4 py-8">
+          <EmptyState
+            title="Your Cart is Empty"
+            description="Browse our products and add some items to your cart."
+            actionLabel="Continue Shopping"
+            actionTo="/"
+            icon={<span>🧺</span>}
+          />
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">Shopping Cart</h1>
+  const handleSwipe = (productId: string, info: PanInfo) => {
+    if (info.offset.x < -100) {
+      // Swiped left sufficiently
+      removeItem(productId);
+      setSwipingItemId(null);
+    } else {
+      setSwipingItemId(null);
+    }
+  };
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+  return (
+    <div className="min-h-screen bg-gray-50 pb-32 md:pb-8">
+      {/* Header with back button */}
+      <div className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-4">
+          <button
+            onClick={() => navigate('/')}
+            className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="Go back to home"
+          >
+            <ArrowLeftIcon className="h-6 w-6 text-gray-700" />
+          </button>
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">My Cart</h1>
+        </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 py-4">
+        {/* Swipe to Delete Hint - Mobile Only */}
+        {items.length > 0 && (
+          <div className="md:hidden mb-4 flex items-center justify-center gap-2 text-gray-500 text-sm">
+            <ArrowLongLeftIcon className="h-5 w-5" />
+            <span>Swipe left to delete</span>
+          </div>
+        )}
+
         {/* Cart Items */}
-        <div className="lg:col-span-2 space-y-4">
-          {items.map((item) => (
-            <div
-              key={item.product._id}
-              className="flex flex-col sm:flex-row sm:items-start sm:space-x-4 space-y-3 sm:space-y-0 bg-white p-4 rounded-lg shadow"
-            >
-              <img
-                src={item.product.imageUrl}
-                alt={item.product.name}
-                className="w-full sm:w-24 h-40 sm:h-24 object-cover rounded"
-              />
-              <div className="flex-grow min-w-0">
-                <Link
-                  to={`/products/${item.product._id}`}
-                  className="text-lg font-semibold hover:text-green-600"
+        <div className="space-y-3 mb-4">
+          <AnimatePresence>
+            {items.map((item, index) => {
+              const unitLabel = deriveUnitLabel({
+                unitLabel: item.product.unitLabel,
+                g: item.product.g,
+                pieces: item.product.pieces
+              });
+
+              return (
+                <motion.div
+                  key={item.product._id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 100 }}
+                  transition={{ delay: index * 0.05 }}
+                  drag="x"
+                  dragConstraints={{ left: -200, right: 0 }}
+                  dragElastic={0.2}
+                  onDragStart={() => setSwipingItemId(item.product._id)}
+                  onDragEnd={(e, info) => handleSwipe(item.product._id, info)}
+                  className="relative bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
                 >
-                  {item.product.name}
-                </Link>
-                <p className="text-gray-600">{item.product.category}</p>
-                <p className="font-semibold mt-1">₹{item.product.price}</p>
-                {/* Unit-aware stock breakdown (live via SSE) */}
-                <div className="mt-1 text-xs text-gray-600 space-y-0.5">
-                  {(() => {
-                    const live = stocks.get(item.product._id);
-                    const stock = typeof live === 'number' ? live : (item.product.stock || 0);
-                    if (stock > 0) {
-                      return (
-                    <>
-                      <p>{stock} packs available</p>
-                      {typeof item.product.g === 'number' && item.product.g > 0 && (() => {
-                        const per = item.product.g;
-                        const totalG = stock * per;
-                        const total = formatWeightFromGrams(totalG) || `${totalG} g`;
-                        return (
-                          <p>Each: {formatWeightFromGrams(per) || `${per} g`} • Total ~{total}</p>
-                        );
-                      })()}
-                      {typeof item.product.pieces === 'number' && item.product.pieces > 0 && (
-                        <p>Each: {item.product.pieces} pcs • Total {stock * item.product.pieces} pcs</p>
-                      )}
-                      {stock <= 5 && (
-                        <p className="text-amber-700">Only {stock} left</p>
-                      )}
-                    </>
-                      );
-                    }
-                    return <p className="text-red-600">Out of stock</p>;
-                  })()}
-                </div>
-                <div className="flex items-center space-x-4 mt-2">
-                  <div className="flex items-center border rounded">
-                    <button
-                      onClick={() => 
-                        updateQuantity(item.product._id, Math.max(0, item.quantity - 1))
-                      }
-                      className="px-3 py-1 text-gray-600 hover:bg-gray-100"
+                  {/* Delete background (shown when swiping) */}
+                  {swipingItemId === item.product._id && (
+                    <div className="absolute inset-0 bg-red-500 flex items-center justify-end px-6">
+                      <TrashIcon className="h-6 w-6 text-white" />
+                    </div>
+                  )}
+
+                  {/* Cart Item Content */}
+                  <div className="relative bg-white flex items-center gap-3 p-3">
+                    {/* Product Image */}
+                    <Link
+                      to={`/products/${item.product._id}`}
+                      className="flex-shrink-0"
                     >
-                      -
-                    </button>
-                    <span className="px-3 py-1">{item.quantity}</span>
-                    <button
-                      onClick={() => {
-                        const live = stocks.get(item.product._id);
-                        const stock = typeof live === 'number' ? live : (item.product.stock || 0);
-                        if (stock <= 0) {
-                          show('This item is currently out of stock', { type: 'warning' });
-                          return;
-                        }
-                        if (item.quantity >= stock) {
-                          show('Cannot exceed available stock', { type: 'warning' });
-                          updateQuantity(item.product._id, stock);
-                        } else {
-                          updateQuantity(item.product._id, item.quantity + 1);
-                        }
-                      }}
-                      className="px-3 py-1 text-gray-600 hover:bg-gray-100"
-                    >
-                      +
-                    </button>
+                      <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100">
+                        <img
+                          src={item.product.imageUrl || item.product.images?.[0] || ''}
+                          alt={item.product.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </Link>
+
+                    {/* Product Details */}
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        to={`/products/${item.product._id}`}
+                        className="block"
+                      >
+                        <h3 className="font-semibold text-gray-900 text-sm md:text-base truncate">
+                          {item.product.name}
+                        </h3>
+                      </Link>
+                      <p className="text-xs text-gray-500">{item.product.category}</p>
+                      <p className="text-xs text-gray-600 mt-0.5">{unitLabel}</p>
+
+                      {/* Price */}
+                      <p className="text-base font-bold text-gray-900 mt-1">
+                        ₹{item.product.price.toFixed(2)}
+                      </p>
+                    </div>
+
+                    {/* Quantity Controls & Delete */}
+                    <div className="flex flex-col items-end gap-2">
+                      {/* Quantity Controls */}
+                      <div className="flex items-center bg-gray-50 rounded-lg border border-gray-200">
+                        <button
+                          onClick={() => updateQuantity(item.product._id, Math.max(0, item.quantity - 1))}
+                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                          aria-label="Decrease quantity"
+                        >
+                          −
+                        </button>
+                        <span className="w-8 text-center font-medium text-sm">{item.quantity.toString().padStart(2, '0')}</span>
+                        <button
+                          onClick={() => {
+                            const live = stocks.get(item.product._id);
+                            const stock = typeof live === 'number' ? live : (item.product.stock || 0);
+                            if (stock <= 0) {
+                              show('This item is currently out of stock', { type: 'warning' });
+                              return;
+                            }
+                            if (item.quantity >= stock) {
+                              show('Cannot exceed available stock', { type: 'warning' });
+                              updateQuantity(item.product._id, stock);
+                            } else {
+                              updateQuantity(item.product._id, item.quantity + 1);
+                            }
+                          }}
+                          className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors"
+                          aria-label="Increase quantity"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* Delete Button (desktop) */}
+                      <button
+                        onClick={() => removeItem(item.product._id)}
+                        className="hidden md:flex p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                        aria-label="Remove item"
+                      >
+                        <TrashIcon className="h-5 w-5 text-red-500" />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => removeItem(item.product._id)}
-                    className="text-red-500 hover:text-red-600"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-              <p className="text-lg font-semibold whitespace-nowrap">
-                ₹{item.product.price * item.quantity}
-              </p>
-            </div>
-          ))}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
 
-        {/* Order Summary */}
-        <div className="lg:col-span-1">
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-bold mb-4">Order Summary</h2>
-            {Banner}
-            <div className="space-y-2 mb-4">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span>₹{totalPrice}</span>
+      {/* Sticky Order Summary - Mobile & Desktop */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+        <div className="max-w-5xl mx-auto px-4 py-4">
+          {Banner}
+
+          {/* Order Summary */}
+          <div className="bg-gray-50 rounded-xl p-4 mb-3">
+            <h2 className="text-lg font-bold text-gray-900 mb-3">Order Summary</h2>
+
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between text-gray-700">
+                <span>Sub Total</span>
+                <span className="font-semibold">₹{totalPrice.toFixed(2)}</span>
               </div>
+
               {settingsLoading ? (
-                <div className="flex justify-between text-sm text-gray-700">
-                  <span>Delivery Fee</span>
+                <div className="flex justify-between text-gray-700">
+                  <span>Delivery fee</span>
                   <span className="inline-block h-4 w-12 bg-gray-200 rounded animate-pulse" />
                 </div>
               ) : deliverySettings && deliverySettings.enabled ? (
-                <div className="flex justify-between text-sm text-gray-700">
-                  <span>Delivery Fee</span>
-                  <span>
+                <div className="flex justify-between text-gray-700">
+                  <span>Delivery fee</span>
+                  <span className="font-semibold">
                     {deliverySettings.freeDeliveryThreshold > 0 && totalPrice >= deliverySettings.freeDeliveryThreshold
                       ? 'Free'
-                      : (deliverySettings.deliveryFee > 0 ? `₹${deliverySettings.deliveryFee}` : 'Free')}
+                      : (deliverySettings.deliveryFee > 0 ? `₹${deliverySettings.deliveryFee.toFixed(2)}` : 'Free')}
                   </span>
                 </div>
               ) : null}
-              <div className="border-t pt-2 mt-2">
-                <div className="flex justify-between font-bold">
-                  <span>Total</span>
-                  {settingsLoading ? (
-                    <span className="inline-block h-5 w-16 bg-gray-200 rounded animate-pulse" />
-                  ) : (
-                    <span>
-                      ₹{(deliverySettings && deliverySettings.enabled
-                        ? (deliverySettings.freeDeliveryThreshold > 0 && totalPrice >= deliverySettings.freeDeliveryThreshold
-                            ? totalPrice
-                            : totalPrice + (deliverySettings.deliveryFee || 0))
-                        : totalPrice)}
-                    </span>
-                  )}
-                </div>
-              </div>
             </div>
+
+            {/* Total */}
+            <div className="flex justify-between items-center pt-3 mt-3 border-t border-gray-200">
+              <span className="text-lg font-bold text-gray-900">Total</span>
+              {settingsLoading ? (
+                <span className="inline-block h-6 w-20 bg-gray-200 rounded animate-pulse" />
+              ) : (
+                <span className="text-2xl font-bold text-gray-900">
+                  ₹{(deliverySettings && deliverySettings.enabled
+                    ? (deliverySettings.freeDeliveryThreshold > 0 && totalPrice >= deliverySettings.freeDeliveryThreshold
+                        ? totalPrice
+                        : totalPrice + (deliverySettings.deliveryFee || 0))
+                    : totalPrice).toFixed(2)}
+                </span>
+              )}
+            </div>
+
+            {/* Hints */}
             {!settingsLoading && deliverySettings && deliverySettings.enabled && deliverySettings.freeDeliveryThreshold > 0 && totalPrice < deliverySettings.freeDeliveryThreshold && (
-              <p className="text-xs text-gray-600">Free delivery over ₹{deliverySettings.freeDeliveryThreshold}</p>
+              <p className="text-xs text-gray-600 mt-2">Free delivery over ₹{deliverySettings.freeDeliveryThreshold}</p>
             )}
             {!settingsLoading && disableCheckout && (
-              <p className="text-xs text-amber-700 mt-1">Add ₹{belowMinBy} more to reach minimum order value.</p>
+              <p className="text-xs text-amber-700 mt-2">Add ₹{belowMinBy} more to reach minimum order value.</p>
             )}
-            <button
-              onClick={() => { if (!disableCheckout) navigate('/checkout'); }}
-              disabled={disableCheckout}
-              aria-disabled={disableCheckout}
-              className={`w-full py-3 rounded-lg font-semibold ${disableCheckout ? 'bg-gray-300 text-gray-600 cursor-not-allowed' : 'bg-green-600 text-white hover:bg-green-700'}`}
-            >
-              Proceed to Checkout
-            </button>
           </div>
+
+          {/* Checkout Button */}
+          <motion.button
+            onClick={() => { if (!disableCheckout) navigate('/checkout'); }}
+            disabled={disableCheckout}
+            aria-disabled={disableCheckout}
+            whileHover={!disableCheckout ? { scale: 1.02 } : {}}
+            whileTap={!disableCheckout ? { scale: 0.98 } : {}}
+            className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all ${
+              disableCheckout
+                ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                : 'bg-green-600 text-white hover:bg-green-700'
+            }`}
+          >
+            Checkout
+          </motion.button>
         </div>
       </div>
+    </div>
     </div>
   );
 }

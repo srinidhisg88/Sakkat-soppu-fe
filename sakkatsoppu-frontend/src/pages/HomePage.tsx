@@ -5,6 +5,7 @@ import { Product } from '../types';
 import { getProducts } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
 import { VideoHeroSection } from '../components/VideoHeroSection';
+import { Link } from 'react-router-dom';
 // import AboutFarmersSection from '../components/AboutFarmersSection';
 import {
   SparklesIcon,
@@ -54,17 +55,58 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
   const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: ['products', 'home-featured'],
     queryFn: async () => {
-      const res = await getProducts({ page: 1, limit: 8 });
+      const res = await getProducts({ page: 1, limit: 20 });
       type ProductsEnvelope = { data?: Product[]; products?: Product[]; items?: Product[]; results?: Product[] } | Product[];
       const payload = res.data as ProductsEnvelope;
       const list = Array.isArray(payload)
         ? payload
         : payload?.data ?? payload?.products ?? payload?.items ?? payload?.results ?? [];
+      // Filter out products with stock <= 0 and take first 8
+      const inStockProducts = (list as Product[]).filter(p => {
+        const stock = Number(p.stock ?? 0);
+        return stock > 0;
+      });
+      return inStockProducts.slice(0, 8) as Product[];
+    },
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  // Fetch all products to derive categories
+  const { data: allProducts = [] } = useQuery<Product[]>({
+    queryKey: ['products', 'all-for-categories'],
+    queryFn: async () => {
+      const res = await getProducts({ page: 1, limit: 1000 });
+      type ProductsEnvelope = { data?: Product[]; products?: Product[]; items?: Product[] } | Product[];
+      const payload = res.data as ProductsEnvelope;
+      const list = Array.isArray(payload) ? payload : payload?.data ?? payload?.products ?? payload?.items ?? [];
       return list as Product[];
     },
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+
+  // Derive categories from products
+  const categories = React.useMemo(() => {
+    const categoryMap = new Map<string, { name: string; image: string }>();
+
+    allProducts.forEach(product => {
+      const categoryName = product.category || 'Uncategorized';
+      if (!categoryMap.has(categoryName)) {
+        categoryMap.set(categoryName, {
+          name: categoryName,
+          image: product.imageUrl || product.images?.[0] || ''
+        });
+      }
+    });
+
+    return Array.from(categoryMap.entries()).map(([name, data]) => ({
+      _id: name,
+      name: name,
+      image: data.image
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [allProducts]);
+
 
   const effectiveProducts = products;
 
@@ -82,14 +124,36 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
         viewport={{ once: true }}
         className="max-w-6xl mx-auto px-4"
       >
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* Mobile: Horizontal scroll */}
+        <div className="md:hidden -mx-4">
+          <div className="flex gap-4 overflow-x-auto px-4 pb-4 scrollbar-hide">
+            {features.map((feature, index) => (
+              <motion.div
+                key={index}
+                variants={itemVariants}
+                className="group relative bg-white p-4 rounded-xl shadow-md flex-shrink-0 w-[280px] border border-green-100/70"
+              >
+                <div className="absolute inset-x-0 top-0 h-1 rounded-t-xl bg-gradient-to-r from-green-500 via-emerald-400 to-green-500" />
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-100 to-green-50 text-green-700 flex items-center justify-center mb-3">
+                  {feature.icon}
+                </div>
+                <h3 className="text-base font-bold text-gray-900 mb-1">{feature.title}</h3>
+                <p className="text-gray-700 text-sm leading-relaxed">
+                  {feature.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop: Grid */}
+        <div className="hidden md:grid grid-cols-3 gap-8">
           {features.map((feature, index) => (
             <motion.div
               key={index}
               variants={itemVariants}
               className="group relative bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all border border-green-100/70 hover:-translate-y-0.5"
             >
-              {/* Accent bar */}
               <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-green-500 via-emerald-400 to-green-500" />
               <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-100 to-green-50 text-green-700 ring-1 ring-green-200 group-hover:ring-green-300 shadow-sm flex items-center justify-center mb-4">
                 {feature.icon}
@@ -103,7 +167,60 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
         </div>
       </motion.section>
 
-      
+      {/* Categories Section */}
+      {categories.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4">
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-3xl font-bold mb-8"
+          >
+            Shop by Category
+          </motion.h2>
+
+          {/* Horizontally scrollable categories */}
+          <div className="relative -mx-4 md:mx-0">
+            <div className="overflow-x-auto scrollbar-hide px-4 md:px-0">
+              <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true }}
+                className="flex gap-6 pb-4"
+              >
+                {categories.map((category) => (
+                  <motion.div
+                    key={category._id}
+                    variants={itemVariants}
+                    className="flex-shrink-0"
+                  >
+                    <Link
+                      to={`/categories/all?category=${encodeURIComponent(category.name)}`}
+                      className="flex flex-col items-center gap-3 group"
+                    >
+                      <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden bg-gray-200 shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+                        {category.image ? (
+                          <img
+                            src={category.image}
+                            alt={category.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gradient-to-br from-green-400 to-green-600"></div>
+                        )}
+                      </div>
+                      <span className="text-sm md:text-base font-semibold text-gray-800 text-center max-w-[100px] md:max-w-[140px] group-hover:text-green-600 transition-colors">
+                        {category.name}
+                      </span>
+                    </Link>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Featured Products */}
       <section className="max-w-6xl mx-auto px-4">

@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Order, Product } from '../types';
 import { deriveUnitLabel } from '../utils/format';
 import { getOrders, getProducts } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { EmptyState } from '../components/EmptyState';
-// import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeftIcon, MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function OrdersPage() {
   const { isAuthenticated } = useAuth();
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
   const [status, setStatus] = useState<'all' | 'pending' | 'confirmed' | 'delivered' | 'cancelled'>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
 
   type OrderStatus = 'pending' | 'confirmed' | 'delivered' | 'cancelled';
   const normalizeStatus = (val?: string): OrderStatus => {
@@ -97,25 +101,135 @@ export function OrdersPage() {
     effectiveOrders = raw ? (JSON.parse(raw) as OrderLike[]) : [];
   }
 
-  const filtered: OrderLike[] = status === 'all'
-    ? effectiveOrders
-    : effectiveOrders.filter((o) => normalizeStatus(o.status as string | undefined) === status);
+  // Combined filter: by status AND search query
+  const filtered: OrderLike[] = useMemo(() => {
+    let result = effectiveOrders;
+
+    // Filter by status
+    if (status !== 'all') {
+      result = result.filter((o) => normalizeStatus(o.status as string | undefined) === status);
+    }
+
+    // Filter by search query (product name or status)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((order) => {
+        // Search by status
+        const orderStatus = normalizeStatus(order.status as string | undefined);
+        if (orderStatus.toLowerCase().includes(query)) return true;
+
+        // Search by product name
+        const items = (order.items || []) as Array<{ productId: string; name?: string; product?: Partial<Product> }>;
+        return items.some((item) => {
+          const pid = item.productId;
+          const embedded = (typeof item.product === 'object' ? item.product as Partial<Product> : undefined);
+          const prod: Partial<Product> | undefined = embedded || productMap.get(pid);
+          const name = item.name || prod?.name || '';
+          return name.toLowerCase().includes(query);
+        });
+      });
+    }
+
+    return result;
+  }, [effectiveOrders, status, searchQuery, productMap]);
+
+  // Helper function for status badge color
+  const getStatusColor = (orderStatus: OrderStatus) => {
+    switch (orderStatus) {
+      case 'delivered':
+        return 'bg-green-500 text-white';
+      case 'cancelled':
+        return 'bg-red-500 text-white';
+      case 'pending':
+      case 'confirmed':
+      default:
+        return 'bg-yellow-400 text-gray-900';
+    }
+  };
+
+  const getStatusLabel = (orderStatus: OrderStatus) => {
+    switch (orderStatus) {
+      case 'delivered':
+        return 'Completed';
+      case 'pending':
+      case 'confirmed':
+        return 'In Process';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return orderStatus.charAt(0).toUpperCase() + orderStatus.slice(1);
+    }
+  };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
-      <h1 className="text-2xl font-bold mb-4">My Orders</h1>
-
-      <div className="flex gap-2 mb-6 flex-wrap">
-    {(['all','pending','confirmed','delivered','cancelled'] as const).map((s) => (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header with back button */}
+      <div className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-4">
           <button
-            key={s}
-      onClick={() => setStatus(s)}
-            className={`px-3 py-1 rounded-full text-sm ${status===s ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+            onClick={() => navigate('/')}
+            className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors"
+            aria-label="Go back to home"
           >
-            {s[0].toUpperCase()+s.slice(1)}
+            <ArrowLeftIcon className="h-6 w-6 text-gray-700" />
           </button>
-        ))}
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900">My Order</h1>
+        </div>
       </div>
+
+      <div className="max-w-5xl mx-auto px-4 py-4">
+        {/* Search and Filter Bar */}
+        <div className="mb-6 flex gap-3">
+          <div className="flex-1 relative">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search here..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            />
+          </div>
+          <button
+            onClick={() => setShowFilterMenu(!showFilterMenu)}
+            className="p-3 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+            aria-label="Toggle filter menu"
+          >
+            <FunnelIcon className="h-5 w-5 text-gray-700" />
+          </button>
+        </div>
+
+        {/* Filter Menu */}
+        <AnimatePresence>
+          {showFilterMenu && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-4 bg-white rounded-lg border border-gray-200 p-4 overflow-hidden"
+            >
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Filter by Status</h3>
+              <div className="flex flex-wrap gap-2">
+                {(['all', 'pending', 'confirmed', 'delivered', 'cancelled'] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => {
+                      setStatus(s);
+                      setShowFilterMenu(false);
+                    }}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      status === s
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
       {isLoading && effectiveOrders.length === 0 && (
         <div className="py-4">
@@ -143,120 +257,124 @@ export function OrdersPage() {
         </div>
       ) : null}
 
-  <div className="space-y-4">
-  {filtered.map((order) => (
-          <div
-      key={order._id || order.id}
-    className="bg-white rounded-lg shadow-sm p-4"
-          >
-            <div className="flex justify-between items-start mb-4">
-              <div>
-        <p className="text-xs text-gray-600">
-                  Order placed on{' '}
-                  {new Date(order.createdAt ?? Date.now()).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                  })}
-                </p>
-        <p className="text-xs text-gray-600">
-          Order ID: {order._id || order.id}
-                </p>
-              </div>
-        <span
-        className={`px-2 py-0.5 rounded-full text-xs font-medium
-                  ${
-          normalizeStatus(order.status as string | undefined) === 'delivered'
-                      ? 'bg-green-100 text-green-800'
-                      : normalizeStatus(order.status as string | undefined) === 'cancelled'
-                      ? 'bg-red-100 text-red-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }
-                `}
-              >
-        {(() => {
-          const s = normalizeStatus(order.status as string | undefined);
-          return s.charAt(0).toUpperCase() + s.slice(1);
-        })()}
-              </span>
-            </div>
+        {/* Orders List */}
+        <div className="space-y-4">
+          {filtered.map((order, index) => {
+            const orderStatus = normalizeStatus(order.status as string | undefined);
 
-  <div className="border-t border-b py-3 mb-3">
-              {(() => {
-                // Allow optional, backend-embedded fields without changing global OrderItem type
-                type ExtendedOrderItem = Order['items'][number] & {
-                  id?: string;
-                  product?: Partial<Product> | string;
-                  name?: string;
-                  g?: number;
-                  pieces?: number;
-                  unitLabel?: string;
-                };
-                const items = (order.items || []) as unknown as ExtendedOrderItem[];
-                return items.map((item) => (
-                <div
-                  key={String(item.productId || item.id || Math.random())}
-      className="flex justify-between items-center py-1.5"
-                >
+            return (
+              <motion.div
+                key={order._id || order.id || index}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="bg-white rounded-xl shadow-sm p-4 border border-gray-100"
+              >
+                {/* Order Header - Title and Status */}
+                <div className="flex justify-between items-center mb-3">
                   <div>
-                    {(() => {
+                    <p className="text-xs text-gray-500 mb-1">
+                      {new Date(order.createdAt ?? Date.now()).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {(() => {
+                        const items = (order.items || []) as Array<{ productId: string; name?: string; product?: Partial<Product> }>;
+                        if (items.length === 0) return 'Order';
+                        const firstItem = items[0];
+                        const pid = firstItem.productId;
+                        const embedded = (typeof firstItem.product === 'object' ? firstItem.product as Partial<Product> : undefined);
+                        const prod: Partial<Product> | undefined = embedded || productMap.get(pid);
+                        const name = firstItem.name || prod?.name || 'Items';
+                        return items.length > 1 ? `${name} +${items.length - 1} more` : name;
+                      })()}
+                    </p>
+                  </div>
+                  <span className={`px-4 py-1.5 rounded-full text-xs font-semibold ${getStatusColor(orderStatus)}`}>
+                    {getStatusLabel(orderStatus)}
+                  </span>
+                </div>
+
+                {/* Order Items */}
+                <div className="mb-3 space-y-2">
+                  {(() => {
+                    type ExtendedOrderItem = Order['items'][number] & {
+                      id?: string;
+                      product?: Partial<Product> | string;
+                      name?: string;
+                      g?: number;
+                      pieces?: number;
+                      unitLabel?: string;
+                    };
+                    const items = (order.items || []) as unknown as ExtendedOrderItem[];
+                    return items.map((item, idx) => {
                       const pid = item.productId;
-                      // Prefer embedded product if present, otherwise map by productId
                       const embedded = (typeof item.product === 'object' ? item.product as Partial<Product> : undefined);
                       const prod: Partial<Product> | undefined = embedded || productMap.get(pid);
-                      const fallbackName = 'Item';
-                      const name = item.name || prod?.name || fallbackName;
+                      const name = item.name || prod?.name || 'Item';
                       const grams = typeof item.g === 'number' ? item.g : (typeof prod?.g === 'number' ? prod.g : 0);
                       const pcs = typeof item.pieces === 'number' ? item.pieces : (typeof prod?.pieces === 'number' ? prod.pieces! : 0);
                       const unitLabel = deriveUnitLabel({ unitLabel: (item.unitLabel as string | undefined) || (prod?.unitLabel as string | undefined), g: grams, pieces: pcs });
+
                       return (
-                        <>
-                          <p className="font-medium text-sm">{name}</p>
-                          <p className="text-xs text-gray-600">Qty: {item.quantity}{unitLabel ? ` • for ${unitLabel}` : ''}</p>
-                        </>
+                        <div key={String(item.productId || item.id || idx)} className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-gray-900">{name}</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Qty: {item.quantity}{unitLabel ? ` • ${unitLabel}` : ''}
+                            </p>
+                          </div>
+                          <p className="text-sm font-semibold text-gray-900">
+                            ₹{(Number(item.price) || 0) * Number(item.quantity || 0)}
+                          </p>
+                        </div>
                       );
-                    })()}
+                    });
+                  })()}
+                </div>
+
+                {/* Pricing Breakdown */}
+                <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
+                  {typeof order.subtotalPrice === 'number' && (
+                    <div className="flex justify-between text-gray-600">
+                      <span>Subtotal</span>
+                      <span>₹{order.subtotalPrice}</span>
+                    </div>
+                  )}
+                  {order.couponCode && typeof order.discountAmount === 'number' && order.discountAmount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Coupon ({order.couponCode})</span>
+                      <span>-₹{order.discountAmount}</span>
+                    </div>
+                  )}
+                  {typeof order.deliveryFee === 'number' && (
+                    <div className="flex justify-between text-gray-600">
+                      <span>Delivery Fee</span>
+                      <span>{order.deliveryFee === 0 ? 'Free' : `₹${order.deliveryFee}`}</span>
+                    </div>
+                  )}
+
+                  {/* Total */}
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                    <span className="font-semibold text-gray-900">Total Amount</span>
+                    <span className="text-lg font-bold text-gray-900">₹{order.totalPrice ?? 0}</span>
                   </div>
-                  <p className="font-medium text-sm">₹{(Number(item.price) || 0) * Number(item.quantity || 0)}</p>
                 </div>
-                ));
-              })()}
-            </div>
-            {/* Pricing breakdown in the middle section */}
-            <div className="mt-2 space-y-1 text-sm">
-              {typeof order.subtotalPrice === 'number' && (
-                <div className="flex justify-between text-gray-700">
-                  <span>Subtotal</span>
-                  <span>₹{order.subtotalPrice}</span>
-                </div>
-              )}
-              {order.couponCode && typeof order.discountAmount === 'number' && order.discountAmount > 0 && (
-                <div className="flex justify-between text-green-700">
-                  <span>Coupon ({order.couponCode})</span>
-                  <span>-₹{order.discountAmount}</span>
-                </div>
-              )}
-              {typeof order.deliveryFee === 'number' && (
-                <div className="flex justify-between text-gray-700">
-                  <span>Delivery Fee</span>
-                  <span>{order.deliveryFee === 0 ? 'Free' : `₹${order.deliveryFee}`}</span>
-                </div>
-              )}
-            </div>
 
-            <div className="flex justify-between items-center mt-3">
-              <div>
-                <p className="text-xs text-gray-600">Delivery Address</p>
-                <p className="mt-0.5 text-sm">{order.address}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-600">Total Amount</p>
-                <p className="text-lg font-bold">₹{order.totalPrice ?? 0}</p>
-              </div>
-            </div>
-
-          </div>
-        ))}
+                {/* Delivery Address */}
+                {order.address && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-500 mb-1">Delivery Address</p>
+                    <p className="text-sm text-gray-700">{order.address}</p>
+                  </div>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

@@ -9,7 +9,6 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../hooks/useToast';
 import { useAddToCartBar } from '../hooks/useAddToCartBar';
 import { useStockSubscription } from '../hooks/useStockSubscription';
-import { motion } from 'framer-motion';
 
 export function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -295,6 +294,31 @@ export function ProductDetailsPage() {
             <p className="text-gray-700">{product.description}</p>
           </div>
 
+          {/* Stock information */
+          /* Use numericStock to avoid string '0' issues from backend */}
+    <div className="space-y-1">
+            {numericStock > 0 ? (
+              <>
+                <p className="text-gray-800 font-medium">{numericStock} packs available</p>
+                {typeof product.g === 'number' && product.g > 0 && (() => {
+                  const per = formatWeightFromGrams(product.g);
+                  const totalG = numericStock * product.g;
+                  const total = formatWeightFromGrams(totalG) || `${totalG} g`;
+                  return (
+                    <p className="text-sm text-gray-600">Each pack: {per} • Total ~{total}</p>
+                  );
+                })()}
+                {typeof product.pieces === 'number' && product.pieces > 0 && (
+                  <p className="text-sm text-gray-600">Each pack: {product.pieces} pcs • Total {numericStock * product.pieces} pcs</p>
+                )}
+                {numericStock <= 5 && (
+      <p className="text-xs text-amber-700">Only {numericStock} left</p>
+                )}
+              </>
+            ) : (
+              <p className="text-red-600 font-medium">Out of stock</p>
+            )}
+          </div>
 
           {inCart ? (
             <div className="space-y-3">
@@ -369,25 +393,17 @@ export function ProductDetailsPage() {
                 </div>
               )}
 
-              <motion.button
+              <button
                 onClick={handleAddToCart}
                 disabled={remaining <= 0}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.95 }}
-                animate={{ scale: 1 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 400,
-                  damping: 17
-                }}
-                className={`w-full py-3 rounded-lg font-semibold transition-all ${
+                className={`w-full py-3 rounded-lg font-semibold ${
                   remaining > 0
-                    ? 'bg-green-600 text-white hover:bg-green-700 shadow-md hover:shadow-lg active:shadow-sm'
+                    ? 'bg-green-600 text-white hover:bg-green-700'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                {remaining > 0 ? 'Add to Cart' : 'Out of Stock'}
-              </motion.button>
+                {remaining > 0 ? 'Add' : 'Out of Stock'}
+              </button>
             </>
           )}
 

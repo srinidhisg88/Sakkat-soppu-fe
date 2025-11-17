@@ -135,7 +135,6 @@ export default function OrderDetailsPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold">Order Details</h1>
-          <p className="text-sm text-gray-600">Order ID: {order._id || order.id}</p>
         </div>
         <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[order.status || 'pending'] || 'bg-gray-100 text-gray-800'}`}>
           {order.status || 'pending'}
@@ -149,7 +148,7 @@ export default function OrderDetailsPage() {
         </div>
         <div className="flex justify-between">
           <span className="text-gray-600">Payment mode</span>
-          <span className="font-medium">{order.paymentMode || 'COD'}</span>
+          <span className="font-medium">Cash on Delivery / UPI on Delivery</span>
         </div>
         {typeof order.subtotalPrice === 'number' && (
           <div className="flex justify-between">
@@ -217,9 +216,33 @@ export default function OrderDetailsPage() {
         </div>
       </div>
 
-      <div className="text-right">
-        <Link to="/orders" className="text-green-600 hover:underline">Back to all orders</Link>
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-center mt-8">
+        <Link
+          to="/products"
+          className="inline-flex items-center justify-center px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-md"
+        >
+          Continue Shopping
+        </Link>
+        <Link
+          to="/orders"
+          className="inline-flex items-center justify-center px-6 py-3 bg-white text-green-600 border-2 border-green-600 rounded-lg font-semibold hover:bg-green-50 transition-colors shadow-md"
+        >
+          View All Orders
+        </Link>
       </div>
+
+      {/* Order Confirmation Message */}
+      {order.status === 'pending' && (
+        <div className="mt-8 bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+          <div className="text-green-800 font-semibold text-lg mb-2">
+            ✓ Order Placed Successfully!
+          </div>
+          <p className="text-green-700 text-sm">
+            Thank you for your order. We'll notify you once it's confirmed and on its way.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

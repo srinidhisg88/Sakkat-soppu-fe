@@ -20,7 +20,7 @@ const FALLBACK_VIDEO = {
 // Content slides that will transition - Shorter, more concise
 const contentSlides = [
   {
-    title: "Fresh from Farmers",
+    title: "Sakkat Soppu Online",
     subtitle: "100% organic produce, straight to your door",
     highlight: "100% Organic",
     icon: <SparklesIcon className="h-5 w-5" />

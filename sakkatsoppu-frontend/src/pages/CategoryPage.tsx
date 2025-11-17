@@ -1,19 +1,18 @@
-import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import { Product, Category } from '../types';
-import { getPublicCategories, getProductsByCategory } from '../services/api';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useState, useMemo } from 'react';
+import { Product } from '../types';
+import { getProducts } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
 import { EmptyState } from '../components/EmptyState';
-import Pagination from '../components/Pagination';
-import { ArrowLeftIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, Squares2X2Icon } from '@heroicons/react/24/outline';
 
 const containerVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.1 }
+    transition: { staggerChildren: 0.05 }
   }
 };
 
@@ -22,170 +21,331 @@ const itemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5 }
+    transition: { duration: 0.4 }
   }
 };
 
 export function CategoryPage() {
   const { categoryId } = useParams<{ categoryId: string }>();
-  const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  // URL state: page & limit
-  const params = new URLSearchParams(location.search);
-  const initialPage = Math.max(1, Number(params.get('page') || 1));
-  const initialLimit = Math.max(1, Number(params.get('limit') || 24));
-  const [page, setPage] = useState<number>(initialPage);
-  const limit = initialLimit;
+  // Get selected category from URL
+  const selectedCategory = searchParams.get('category') || null;
 
-  // Keep URL in sync
-  useEffect(() => {
-    const p = new URLSearchParams(location.search);
-    p.set('page', String(page));
-    p.set('limit', String(limit));
-    const nextSearch = p.toString();
-    if (nextSearch !== location.search.replace(/^\?/, '')) {
-      navigate({ pathname: location.pathname, search: nextSearch }, { replace: true });
-    }
-  }, [page, limit, location.pathname, location.search, navigate]);
-
-  // Fetch categories to get category name
-  const { data: categories = [] } = useQuery<Category[]>({
-    queryKey: ['categories', 'list'],
-    queryFn: async () => {
-      const res = await getPublicCategories();
-      const payload = res.data;
-      return (Array.isArray(payload) ? payload : payload?.data ?? payload?.categories ?? []) as Category[];
-    },
-    staleTime: 5 * 60 * 1000,
-    cacheTime: 10 * 60 * 1000,
-  });
-
-  // Find current category
-  const currentCategory = categories.find(cat => cat._id === categoryId);
-
-  // Fetch products by category
+  // Fetch products using the simple /api/products endpoint
   type ProductsEnvelope = {
-    products: Product[];
-    category: Category;
-    total: number;
-    page: number;
-    totalPages: number;
+    products?: Product[];
+    data?: Product[];
+    items?: Product[];
+    total?: number;
   };
 
-  const { data, isLoading, isError } = useQuery<ProductsEnvelope>({
-    queryKey: ['products', 'by-category', categoryId, { page, limit }],
+  const { data: productsData, isLoading, isError } = useQuery<Product[]>({
+    queryKey: ['products', 'all'],
     queryFn: async () => {
-      if (!categoryId) throw new Error('Category ID is required');
-      const res = await getProductsByCategory(categoryId, { page, limit });
-      return res.data as ProductsEnvelope;
+      const res = await getProducts({ page: 1, limit: 1000 });
+      const payload = res.data as ProductsEnvelope;
+      const list = payload?.products ?? payload?.data ?? payload?.items ?? [];
+
+      // Filter out of stock products
+      const inStockProducts = (list as Product[]).filter(p => {
+        const stock = Number(p.stock ?? 0);
+        return stock > 0;
+      });
+      return inStockProducts;
     },
-    keepPreviousData: true,
-    enabled: !!categoryId,
   });
 
-  const products = data?.products ?? [];
-  const total = data?.total ?? 0;
-  const totalPages = data?.totalPages ?? 1;
+  const products = productsData ?? [];
 
-  if (!categoryId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-4">Category Not Found</h1>
-          <p className="text-gray-600 mb-6">The category you're looking for doesn't exist.</p>
-          <button
-            onClick={() => navigate('/products')}
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <ArrowLeftIcon className="h-5 w-5 mr-2" />
-            Back to Products
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // Derive categories from products
+  const categories = useMemo(() => {
+    const categoryMap = new Map<string, { name: string; image: string }>();
+
+    products.forEach(product => {
+      const categoryName = product.category || 'Uncategorized';
+      if (!categoryMap.has(categoryName)) {
+        categoryMap.set(categoryName, {
+          name: categoryName,
+          image: product.imageUrl || product.images?.[0] || ''
+        });
+      }
+    });
+
+    return Array.from(categoryMap.entries()).map(([name, data]) => ({
+      id: name,
+      name: name,
+      image: data.image
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [products]);
+
+  // Filter products by category and search
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      // Category filter
+      const categoryMatch = !selectedCategory || product.category === selectedCategory;
+
+      // Search filter
+      if (!searchQuery.trim()) return categoryMatch;
+
+      const query = searchQuery.toLowerCase();
+      const searchMatch = (
+        product.name?.toLowerCase().includes(query) ||
+        product.description?.toLowerCase().includes(query) ||
+        product.category?.toLowerCase().includes(query)
+      );
+
+      return categoryMatch && searchMatch;
+    });
+  }, [products, selectedCategory, searchQuery]);
+
+  const handleCategoryClick = (categoryName: string | null) => {
+    setSearchQuery(''); // Reset search when changing category
+    if (categoryName) {
+      navigate(`/categories/all?category=${encodeURIComponent(categoryName)}`);
+    } else {
+      navigate('/categories/all');
+    }
+  };
+
+  // Get category icon
+  const getCategoryIcon = () => {
+    return <Squares2X2Icon className="h-5 w-5" />;
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <motion.div
-          initial="hidden"
-          animate="visible"
-          variants={containerVariants}
-          className="space-y-8"
-        >
-
-          {/* Header */}
-          <motion.div variants={itemVariants} className="text-center">
-            <button
-              onClick={() => navigate('/products')}
-              className="inline-flex items-center text-green-600 hover:text-green-700 mb-4 transition-colors"
+    <div className="min-h-screen bg-gray-50">
+      {/* Desktop View */}
+      <div className="hidden md:block">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-8">
+          <div className="flex gap-6">
+            {/* Left Sidebar - Desktop only, sticky */}
+            <motion.aside
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3 }}
+              className="w-64 flex-shrink-0"
             >
-              <ArrowLeftIcon className="h-5 w-5 mr-2" />
-              Back to Products
-            </button>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-              {currentCategory?.name || 'Category Products'}
-            </h1>
-          </motion.div>
+              <div className="sticky top-20 space-y-2">
+                <h2 className="text-lg font-bold text-gray-900 mb-4 px-3">Categories</h2>
 
-          {/* Products Grid */}
-          {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="bg-white rounded-lg shadow-md p-4 animate-pulse">
-                  <div className="w-full h-48 bg-gray-200 rounded-lg mb-4"></div>
-                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                </div>
-              ))}
-            </div>
-          ) : isError ? (
-            <EmptyState
-              title="Error Loading Products"
-              description="There was an error loading products for this category. Please try again."
-              actionLabel="Try Again"
-              actionTo="#"
-            />
-          ) : products.length === 0 ? (
-            <EmptyState
-              title="No Products Found"
-              description={`No products are currently available in the ${currentCategory?.name || 'selected'} category.`}
-              actionLabel="Browse All Products"
-              actionTo="/products"
-            />
-          ) : (
-            <>
-              <motion.div
-                variants={containerVariants}
-                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6"
-              >
-                {products.map((product) => (
-                  <motion.div key={product._id} variants={itemVariants}>
-                    <ProductCard product={product} />
-                  </motion.div>
-                ))}
-              </motion.div>
-
-              {/* Pagination */}
-              {totalPages > 1 && (
-                <motion.div variants={itemVariants} className="flex justify-center">
-                  <Pagination
-                    currentPage={page}
-                    totalPages={totalPages}
-                    onPageChange={setPage}
+                {/* Search Bar */}
+                <div className="relative mb-4">
+                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    placeholder="Search products..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                   />
-                </motion.div>
-              )}
+                </div>
 
-              {/* Results Summary */}
-              <motion.div variants={itemVariants} className="text-center text-gray-600">
-                Showing {products.length} of {total} products in {currentCategory?.name}
+                {/* All Products option */}
+                <button
+                  onClick={() => handleCategoryClick(null)}
+                  className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+                    !selectedCategory
+                      ? 'bg-green-600 text-white font-semibold shadow-md'
+                      : 'bg-white text-gray-700 hover:bg-green-50 hover:text-green-700'
+                  }`}
+                >
+                  All Products
+                </button>
+
+                {/* Category list */}
+                <div className="space-y-1 max-h-[calc(100vh-300px)] overflow-y-auto">
+                  {categories.map((category) => (
+                    <button
+                      key={category.id}
+                      onClick={() => handleCategoryClick(category.name)}
+                      className={`w-full text-left px-4 py-3 rounded-lg transition-all duration-200 ${
+                        selectedCategory === category.name
+                          ? 'bg-green-600 text-white font-semibold shadow-md'
+                          : 'bg-white text-gray-700 hover:bg-green-50 hover:text-green-700'
+                      }`}
+                    >
+                      {category.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.aside>
+
+            {/* Main Content Area */}
+            <div className="flex-1 min-w-0">
+              <motion.div
+                initial="hidden"
+                animate="visible"
+                variants={containerVariants}
+                className="space-y-6"
+              >
+                {/* Header */}
+                <motion.div variants={itemVariants}>
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+                    {selectedCategory || 'All Products'}
+                  </h1>
+                  <p className="text-gray-600 mt-1">
+                    {isLoading ? 'Loading...' : `${filteredProducts.length} products available`}
+                  </p>
+                </motion.div>
+
+                {/* Products Grid */}
+                {isLoading ? (
+                  <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="bg-white rounded-lg shadow-md p-4 animate-pulse">
+                        <div className="w-full h-48 bg-gray-200 rounded-lg mb-4"></div>
+                        <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : isError ? (
+                  <EmptyState
+                    title="Error Loading Products"
+                    description="There was an error loading products. Please try again."
+                    actionLabel="Retry"
+                    actionTo="#"
+                  />
+                ) : filteredProducts.length === 0 ? (
+                  <EmptyState
+                    title="No Products Found"
+                    description={searchQuery ? `No products found for "${searchQuery}"` : `No products are currently available${selectedCategory ? ` in ${selectedCategory}` : ''}.`}
+                    actionLabel="Browse All Products"
+                    actionTo="/categories/all"
+                  />
+                ) : (
+                  <motion.div
+                    variants={containerVariants}
+                    className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"
+                  >
+                    {filteredProducts.map((product) => (
+                      <motion.div key={product._id} variants={itemVariants}>
+                        <ProductCard product={product} />
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
               </motion.div>
-            </>
-          )}
-        </motion.div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile View - Like Screenshot */}
+      <div className="md:hidden">
+        {/* Search Bar */}
+        <div className="bg-white px-4 pt-4 pb-3 sticky top-16 z-40 shadow-sm">
+          <div className="relative">
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-3" />
+            <input
+              type="text"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Title */}
+        <div className="px-4 py-3 bg-white">
+          <h2 className="text-lg font-bold text-gray-800">Recommended Categories</h2>
+        </div>
+
+        <div className="flex">
+          {/* Left Sidebar - Categories with Images */}
+          <aside className="w-24 bg-gray-50 border-r border-gray-200 overflow-y-auto h-[calc(100vh-200px)] flex-shrink-0">
+            <div className="py-2">
+              {/* All Products */}
+              <button
+                onClick={() => handleCategoryClick(null)}
+                className={`w-full px-2 py-3 flex flex-col items-center justify-center gap-2 transition-colors ${
+                  !selectedCategory
+                    ? 'bg-white border-l-4 border-green-600'
+                    : 'hover:bg-gray-100'
+                }`}
+              >
+                <div className="w-8 h-8 flex items-center justify-center">
+                  <Squares2X2Icon className={`h-6 w-6 ${!selectedCategory ? 'text-green-600' : 'text-gray-600'}`} />
+                </div>
+                <span className={`text-xs text-center leading-tight ${!selectedCategory ? 'text-green-600 font-semibold' : 'text-gray-600'}`}>
+                  Popular
+                </span>
+              </button>
+
+              {/* Category List */}
+              {categories.map((category) => {
+                const isActive = selectedCategory === category.name;
+
+                return (
+                  <button
+                    key={category.id}
+                    onClick={() => handleCategoryClick(category.name)}
+                    className={`w-full px-2 py-3 flex flex-col items-center justify-center gap-2 transition-colors ${
+                      isActive
+                        ? 'bg-white border-l-4 border-green-600'
+                        : 'hover:bg-gray-100'
+                    }`}
+                  >
+                    {category.image ? (
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200">
+                        <img
+                          src={category.image}
+                          alt={category.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className={`w-8 h-8 flex items-center justify-center ${isActive ? 'text-green-600' : 'text-gray-600'}`}>
+                        {getCategoryIcon()}
+                      </div>
+                    )}
+                    <span className={`text-xs text-center leading-tight px-1 ${isActive ? 'text-green-600 font-semibold' : 'text-gray-600'}`}>
+                      {category.name}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+
+          {/* Main Products Grid */}
+          <div className="flex-1 px-3 py-4 overflow-y-auto h-[calc(100vh-200px)]">
+            {isLoading ? (
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="bg-white rounded-lg shadow-md p-3 animate-pulse">
+                    <div className="w-full h-32 bg-gray-200 rounded-lg mb-3"></div>
+                    <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                  </div>
+                ))}
+              </div>
+            ) : isError ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">Error loading products</p>
+              </div>
+            ) : filteredProducts.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">
+                  {searchQuery ? `No products found for "${searchQuery}"` : 'No products available'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {filteredProducts.map((product) => (
+                  <div key={product._id}>
+                    <ProductCard product={product} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

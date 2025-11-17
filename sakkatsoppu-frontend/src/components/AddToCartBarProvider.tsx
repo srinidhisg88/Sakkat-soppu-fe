@@ -182,7 +182,7 @@ export function AddToCartBarProvider({ children }: { children: React.ReactNode }
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 200, damping: 22 }}
-            className="fixed inset-x-0 bottom-3 z-50 px-3 sm:px-4"
+            className="fixed inset-x-0 bottom-20 md:bottom-3 z-50 px-3 sm:px-4"
           >
             <div className="mx-auto w-full max-w-xl">
               <div className="rounded-xl shadow-lg bg-green-600 text-white flex items-center justify-between gap-3 px-4 py-3 sm:py-3.5">
