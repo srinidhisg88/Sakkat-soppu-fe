@@ -7,7 +7,7 @@ import { EmptyState } from '../components/EmptyState';
 import { useStockSubscription } from '../hooks/useStockSubscription';
 import { useStockContext } from '../context/StockContext';
 import { useCartAutoReconcile } from '../hooks/useCartAutoReconcile';
-import { deriveUnitLabel, derivePriceForUnit } from '../utils/format';
+import { deriveUnitLabel } from '../utils/format';
 import { ArrowLeftIcon, TrashIcon, ArrowLongLeftIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { useState } from 'react';
@@ -317,10 +317,10 @@ export function CartPage() {
             }`}
           >
             Checkout
-          </motion.button>
+            </motion.button>
+          </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }

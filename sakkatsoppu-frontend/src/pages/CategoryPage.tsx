@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import {  useNavigate, useSearchParams } from 'react-router-dom';
 import { useState, useMemo } from 'react';
 import { Product } from '../types';
 import { getProducts } from '../services/api';
@@ -26,7 +26,7 @@ const itemVariants = {
 };
 
 export function CategoryPage() {
-  const { categoryId } = useParams<{ categoryId: string }>();
+ 
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');

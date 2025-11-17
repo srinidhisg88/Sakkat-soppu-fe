@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Product, /* Farmer, */ Category } from '../types';
-import { deriveUnitLabel, derivePriceForUnit, formatWeightFromGrams } from '../utils/format';
+import { deriveUnitLabel, derivePriceForUnit } from '../utils/format';
 import { getProduct, /* getFarmerById, */ getCategories } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';

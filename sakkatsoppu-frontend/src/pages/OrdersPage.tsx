@@ -148,19 +148,21 @@ export function OrdersPage() {
   };
 
   const getStatusLabel = (orderStatus: OrderStatus) => {
-    switch (orderStatus) {
-      case 'delivered':
-        return 'Completed';
-      case 'pending':
-      case 'confirmed':
-        return 'In Process';
-      case 'cancelled':
-        return 'Cancelled';
-      default:
-        return orderStatus.charAt(0).toUpperCase() + orderStatus.slice(1);
+  switch (orderStatus) {
+    case 'delivered':
+      return 'Completed';
+    case 'pending':
+    case 'confirmed':
+      return 'In Process';
+    case 'cancelled':
+      return 'Cancelled';
+    default: {
+      // Prevent TS "never" error
+      const s = String(orderStatus || '');
+      return s.charAt(0).toUpperCase() + s.slice(1);
     }
-  };
-
+  }
+};
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header with back button */}
