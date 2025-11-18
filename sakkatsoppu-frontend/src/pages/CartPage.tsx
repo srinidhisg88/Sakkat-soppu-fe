@@ -10,14 +10,13 @@ import { useCartAutoReconcile } from '../hooks/useCartAutoReconcile';
 import { deriveUnitLabel } from '../utils/format';
 import { ArrowLeftIcon, TrashIcon, ArrowLongLeftIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import { useState } from 'react';
+import { ShoppingCart } from 'lucide-react';
+import { Shimmer } from '../components/Shimmer';
 
 export function CartPage() {
   const { items, totalPrice, updateQuantity, removeItem, loading } = useCart();
   const navigate = useNavigate();
   const { show } = useToast();
-  const [swipingItemId, setSwipingItemId] = useState<string | null>(null);
-
   // Public delivery settings
   type DeliverySettings = {
     enabled: boolean;
@@ -62,12 +61,33 @@ export function CartPage() {
   // Guests can view local cart; encourage login during checkout
 
   if (loading) {
-    return <div className="text-center py-8">Loading cart...</div>;
+    return (
+      <div className="min-h-screen bg-white">
+        <div className="bg-white shadow-sm sticky top-0 z-10">
+          <div className="max-w-5xl mx-auto px-4 py-4">
+            <Shimmer width="w-32" height="h-8" />
+          </div>
+        </div>
+        <div className="max-w-5xl mx-auto px-4 py-4 space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-gray-50 rounded-2xl p-3 flex items-center gap-3">
+              <Shimmer width="w-20" height="h-20" className="rounded-xl flex-shrink-0" />
+              <div className="flex-1 space-y-2">
+                <Shimmer width="w-3/4" height="h-4" />
+                <Shimmer width="w-1/2" height="h-3" />
+                <Shimmer width="w-20" height="h-5" />
+              </div>
+              <Shimmer width="w-24" height="h-8" className="rounded-lg" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-white">
         {/* Header */}
         <div className="bg-white shadow-sm sticky top-0 z-10">
           <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-4">
@@ -88,7 +108,7 @@ export function CartPage() {
             description="Browse our products and add some items to your cart."
             actionLabel="Continue Shopping"
             actionTo="/"
-            icon={<span>🧺</span>}
+            IconComponent={ShoppingCart}
           />
         </div>
       </div>
@@ -96,20 +116,18 @@ export function CartPage() {
   }
 
   const handleSwipe = (productId: string, info: PanInfo) => {
-    if (info.offset.x < -100) {
-      // Swiped left sufficiently
+    // Only remove if swiped left more than 80px
+    if (info.offset.x < -80) {
       removeItem(productId);
-      setSwipingItemId(null);
-    } else {
-      setSwipingItemId(null);
     }
+    // Otherwise card will snap back automatically due to dragConstraints
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-32 md:pb-8">
-      {/* Header with back button */}
+    <div className="min-h-screen bg-white pb-16 md:pb-0">
+      {/* Header with back button - Fixed */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center gap-4">
           <button
             onClick={() => navigate('/')}
             className="p-2 -ml-2 rounded-full hover:bg-gray-100 transition-colors"
@@ -121,19 +139,23 @@ export function CartPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-4">
-        {/* Swipe to Delete Hint - Mobile Only */}
-        {items.length > 0 && (
-          <div className="md:hidden mb-4 flex items-center justify-center gap-2 text-gray-500 text-sm">
-            <ArrowLongLeftIcon className="h-5 w-5" />
-            <span>Swipe left to delete</span>
-          </div>
-        )}
+      {/* Desktop: Two-column layout, Mobile: Single column with sticky footer */}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="md:grid md:grid-cols-3 md:gap-6">
+          {/* Left Column: Cart Items (2/3 width on desktop) */}
+          <div className="md:col-span-2">
+            {/* Swipe to Delete Hint - Mobile Only */}
+            {items.length > 0 && (
+              <div className="md:hidden mb-4 flex items-center justify-center gap-2 text-gray-500 text-sm">
+                <ArrowLongLeftIcon className="h-5 w-5" />
+                <span>Swipe left to delete</span>
+              </div>
+            )}
 
-        {/* Cart Items */}
-        <div className="space-y-3 mb-4">
+            {/* Cart Items */}
+            <div className="space-y-3 mb-6 md:mb-0">
           <AnimatePresence>
-            {items.map((item, index) => {
+            {items.map((item) => {
               const unitLabel = deriveUnitLabel({
                 unitLabel: item.product.unitLabel,
                 g: item.product.g,
@@ -141,28 +163,26 @@ export function CartPage() {
               });
 
               return (
-                <motion.div
-                  key={item.product._id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 100 }}
-                  transition={{ delay: index * 0.05 }}
-                  drag="x"
-                  dragConstraints={{ left: -200, right: 0 }}
-                  dragElastic={0.2}
-                  onDragStart={() => setSwipingItemId(item.product._id)}
-                  onDragEnd={(_e, info) => handleSwipe(item.product._id, info)}
-                  className="relative bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden"
-                >
-                  {/* Delete background (shown when swiping) */}
-                  {swipingItemId === item.product._id && (
-                    <div className="absolute inset-0 bg-red-500 flex items-center justify-end px-6">
-                      <TrashIcon className="h-6 w-6 text-white" />
-                    </div>
-                  )}
+                <div key={item.product._id} className="relative">
+                  {/* Delete background (behind the card) */}
+                  <div className="absolute inset-0 bg-red-500 rounded-2xl flex items-center justify-end px-6">
+                    <TrashIcon className="h-6 w-6 text-white" />
+                  </div>
 
-                  {/* Cart Item Content */}
-                  <div className="relative bg-white flex items-center gap-3 p-3">
+                  {/* Swipeable Card */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, x: -100 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    drag="x"
+                    dragDirectionLock
+                    dragConstraints={{ left: -100, right: 0 }}
+                    dragElastic={0.1}
+                    dragSnapToOrigin
+                    onDragEnd={(_e, info) => handleSwipe(item.product._id, info)}
+                    className="relative bg-gray-50 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-3 p-3"
+                  >
                     {/* Product Image */}
                     <Link
                       to={`/products/${item.product._id}`}
@@ -239,16 +259,94 @@ export function CartPage() {
                         <TrashIcon className="h-5 w-5 text-red-500" />
                       </button>
                     </div>
-                  </div>
-                </motion.div>
+                  </motion.div>
+                </div>
               );
             })}
           </AnimatePresence>
-        </div>
+            </div>
+          </div>
 
-      {/* Sticky Order Summary - Mobile & Desktop */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
-        <div className="max-w-5xl mx-auto px-4 py-4">
+          {/* Right Column: Order Summary (1/3 width on desktop, hidden on mobile) */}
+          <div className="hidden md:block md:col-span-1">
+            <div className="sticky top-24">
+              {Banner}
+
+              {/* Order Summary */}
+              <div className="bg-gray-50 rounded-xl p-4 mb-3">
+                <h2 className="text-lg font-bold text-gray-900 mb-3">Order Summary</h2>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between text-gray-700">
+                    <span>Sub Total</span>
+                    <span className="font-semibold">₹{totalPrice.toFixed(2)}</span>
+                  </div>
+
+                  {settingsLoading ? (
+                    <div className="flex justify-between text-gray-700">
+                      <span>Delivery fee</span>
+                      <Shimmer width="w-12" height="h-4" />
+                    </div>
+                  ) : deliverySettings && deliverySettings.enabled ? (
+                    <div className="flex justify-between text-gray-700">
+                      <span>Delivery fee</span>
+                      <span className="font-semibold">
+                        {deliverySettings.freeDeliveryThreshold > 0 && totalPrice >= deliverySettings.freeDeliveryThreshold
+                          ? 'Free'
+                          : (deliverySettings.deliveryFee > 0 ? `₹${deliverySettings.deliveryFee.toFixed(2)}` : 'Free')}
+                      </span>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Total */}
+                <div className="flex justify-between items-center pt-3 mt-3 border-t border-gray-200">
+                  <span className="text-lg font-bold text-gray-900">Total</span>
+                  {settingsLoading ? (
+                    <Shimmer width="w-20" height="h-6" />
+                  ) : (
+                    <span className="text-2xl font-bold text-gray-900">
+                      ₹{(deliverySettings && deliverySettings.enabled
+                        ? (deliverySettings.freeDeliveryThreshold > 0 && totalPrice >= deliverySettings.freeDeliveryThreshold
+                            ? totalPrice
+                            : totalPrice + (deliverySettings.deliveryFee || 0))
+                        : totalPrice).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Hints */}
+                {!settingsLoading && deliverySettings && deliverySettings.enabled && deliverySettings.freeDeliveryThreshold > 0 && totalPrice < deliverySettings.freeDeliveryThreshold && (
+                  <p className="text-xs text-gray-600 mt-2">Free delivery over ₹{deliverySettings.freeDeliveryThreshold}</p>
+                )}
+                {!settingsLoading && disableCheckout && (
+                  <p className="text-xs text-amber-700 mt-2">Add ₹{belowMinBy} more to reach minimum order value.</p>
+                )}
+              </div>
+
+              {/* Checkout Button */}
+              <motion.button
+                onClick={() => { if (!disableCheckout) navigate('/checkout'); }}
+                disabled={disableCheckout}
+                aria-disabled={disableCheckout}
+                whileHover={!disableCheckout ? { scale: 1.02 } : {}}
+                whileTap={!disableCheckout ? { scale: 0.98 } : {}}
+                className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all ${
+                  disableCheckout
+                    ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                Checkout
+              </motion.button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile: Sticky Order Summary - Fixed at Bottom Above Nav */}
+      <div className="md:hidden fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+        <div className="px-4 py-4">
           {Banner}
 
           {/* Order Summary */}
@@ -264,7 +362,7 @@ export function CartPage() {
               {settingsLoading ? (
                 <div className="flex justify-between text-gray-700">
                   <span>Delivery fee</span>
-                  <span className="inline-block h-4 w-12 bg-gray-200 rounded animate-pulse" />
+                  <Shimmer width="w-12" height="h-4" />
                 </div>
               ) : deliverySettings && deliverySettings.enabled ? (
                 <div className="flex justify-between text-gray-700">
@@ -282,7 +380,7 @@ export function CartPage() {
             <div className="flex justify-between items-center pt-3 mt-3 border-t border-gray-200">
               <span className="text-lg font-bold text-gray-900">Total</span>
               {settingsLoading ? (
-                <span className="inline-block h-6 w-20 bg-gray-200 rounded animate-pulse" />
+                <Shimmer width="w-20" height="h-6" />
               ) : (
                 <span className="text-2xl font-bold text-gray-900">
                   ₹{(deliverySettings && deliverySettings.enabled
@@ -317,8 +415,7 @@ export function CartPage() {
             }`}
           >
             Checkout
-            </motion.button>
-          </div>
+          </motion.button>
         </div>
       </div>
     </div>

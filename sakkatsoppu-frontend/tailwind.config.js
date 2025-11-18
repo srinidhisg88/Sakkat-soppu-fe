@@ -27,6 +27,20 @@ export default {
           500: '#f97316',
         },
       },
+      keyframes: {
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+        'fade-in-scale': {
+          '0%': { opacity: '0', transform: 'scale(0.95)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+      },
+      animation: {
+        shimmer: 'shimmer 1.5s infinite',
+        'fade-in-scale': 'fade-in-scale 0.5s ease-out forwards',
+      },
     },
   },
   plugins: [],

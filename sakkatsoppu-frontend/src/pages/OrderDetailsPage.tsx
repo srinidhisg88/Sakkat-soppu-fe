@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getOrders, getProducts, getProduct } from '../services/api';
 import { Product } from '../types';
 import { deriveUnitLabel } from '../utils/format';
+import { Shimmer } from '../components/Shimmer';
 
 const statusColors: Record<string, string> = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -116,7 +117,28 @@ export default function OrderDetailsPage() {
   }, [order?.items, productMap, extraProducts]);
 
   if (ordersLoading || ordersFetching) {
-    return <div className="max-w-3xl mx-auto p-6">Loading order…</div>;
+    return (
+      <div className="max-w-3xl mx-auto p-6 space-y-4">
+        <Shimmer width="w-48" height="h-8" />
+        <div className="bg-white rounded-lg p-6 space-y-4">
+          <Shimmer width="w-32" height="h-6" />
+          <Shimmer width="w-full" height="h-4" />
+          <Shimmer width="w-full" height="h-4" />
+          <Shimmer width="w-3/4" height="h-4" />
+        </div>
+        <div className="bg-white rounded-lg p-6 space-y-3">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="flex gap-4">
+              <Shimmer width="w-16" height="h-16" className="rounded-lg" />
+              <div className="flex-1 space-y-2">
+                <Shimmer width="w-2/3" height="h-4" />
+                <Shimmer width="w-1/3" height="h-3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (!order) {

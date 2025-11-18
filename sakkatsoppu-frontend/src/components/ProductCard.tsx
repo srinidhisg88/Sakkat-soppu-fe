@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion';
 import { useState } from 'react';
 import { Link, useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
 import { Product } from '../types';
@@ -103,56 +102,50 @@ export function ProductCard({ product }: ProductCardProps) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02 }}
-      transition={{ duration: 0.3 }}
-      className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 h-full"
-    >
-      <Link to={`/products/${product._id}`} className="h-full flex flex-col">
-        <div className="relative w-full" style={{ aspectRatio: '4 / 3' }}>
-          <motion.img
+    <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 h-full flex flex-col animate-fade-in-scale">
+      <Link to={`/products/${product._id}`} className="flex-shrink-0">
+        <div className="relative w-full overflow-hidden" style={{ aspectRatio: '4 / 3' }}>
+          <img
             src={product.imageUrl || (product.images && product.images[0]) || '/placeholder.png'}
             alt={product.name}
             loading="lazy"
             className="absolute inset-0 w-full h-full object-cover"
-            whileHover={{ scale: 1.03 }}
-            transition={{ duration: 0.3 }}
           />
           {product.isOrganic && (
-            <motion.div 
-              className="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-            >
+            <div className="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
               <SparklesIcon className="h-4 w-4" />
               <span>Organic</span>
-            </motion.div>
+            </div>
           )}
         </div>
-        
-        <div className="p-3 sm:p-4 flex-1 flex flex-col">
+      </Link>
+
+      <div className="p-3 sm:p-4 flex-1 flex flex-col">
+        <Link to={`/products/${product._id}`}>
           <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-1.5 sm:mb-2 hover:text-green-600 transition-colors line-clamp-2 min-h-[42px] sm:min-h-[48px]">
             {product.name}
           </h3>
-          <p className="text-[11px] sm:text-xs text-gray-600 mb-2 sm:mb-2.5 line-clamp-1 min-h-[14px] sm:min-h-[16px]">{product.category}</p>
-          
-    <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2">
-            <div>
-              <span className="text-lg sm:text-xl font-bold text-green-600">₹{product.price}</span>
-              {(() => {
-                const unitLabel = deriveUnitLabel({ unitLabel: product.unitLabel, g: product.g ?? null, pieces: product.pieces ?? null });
-                return unitLabel ? (
-                  <span className="text-[11px] sm:text-xs text-gray-500 ml-1 truncate">for {unitLabel}</span>
-                ) : null;
-              })()}
-            </div>
-          </div>
+        </Link>
+        <p className="text-[11px] sm:text-xs text-gray-600 mb-2 sm:mb-2.5 line-clamp-1 min-h-[14px] sm:min-h-[16px]">{product.category}</p>
 
-          {/* Quantity / Add Controls */}
-          {inCart ? (
-            <div className="mt-3 sm:mt-4">
+        <div className="flex items-center justify-between mb-2 gap-2">
+          <div>
+            <span className="text-lg sm:text-xl font-bold text-green-600">₹{product.price}</span>
+            {(() => {
+              const unitLabel = deriveUnitLabel({ unitLabel: product.unitLabel, g: product.g ?? null, pieces: product.pieces ?? null });
+              return unitLabel ? (
+                <span className="text-[11px] sm:text-xs text-gray-500 ml-1 truncate">for {unitLabel}</span>
+              ) : null;
+            })()}
+          </div>
+        </div>
+
+        {/* Spacer to push controls to bottom */}
+        <div className="flex-1"></div>
+
+        {/* Quantity / Add Controls */}
+        {inCart ? (
+          <div className="mt-auto">
               <div className="text-xs sm:text-sm text-gray-700 mb-2">In your cart</div>
               <div className="flex items-center border rounded-lg overflow-hidden w-full">
                 <button
@@ -173,7 +166,7 @@ export function ProductCard({ product }: ProductCardProps) {
               </div>
             </div>
           ) : (
-            <div className="mt-3 sm:mt-4 flex flex-col gap-2 min-w-0">
+            <div className="mt-auto flex flex-col gap-2 min-w-0">
               {remaining > 0 && (
                 <div className="flex items-center border rounded-lg overflow-hidden w-full">
                   <button
@@ -193,18 +186,10 @@ export function ProductCard({ product }: ProductCardProps) {
                   </button>
                 </div>
               )}
-              <motion.button
+              <button
                 onClick={handleAddToCart}
                 disabled={remaining <= 0}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.95 }}
-                animate={{ scale: 1 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 400,
-                  damping: 17
-                }}
-                className={`w-full py-2.5 px-3 rounded-lg text-white font-medium flex items-center justify-center gap-2 transition-all duration-300 text-sm sm:text-base
+                className={`w-full py-2.5 px-3 rounded-lg text-white font-medium flex items-center justify-center gap-2 transition-all duration-300 text-sm sm:text-base active:scale-95
                   ${
                     remaining > 0
                       ? 'bg-green-600 hover:bg-green-700 shadow-md hover:shadow-lg active:shadow-sm'
@@ -213,11 +198,10 @@ export function ProductCard({ product }: ProductCardProps) {
               >
                 <ShoppingCartIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
                 <span className="truncate">{remaining > 0 ? 'Add' : 'Out of Stock'}</span>
-              </motion.button>
+              </button>
             </div>
           )}
-        </div>
-      </Link>
-    </motion.div>
+      </div>
+    </div>
   );
 }

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getFarmerById } from "../services/api";
 import { Farmer } from "../types";
 import { useEffect, useState } from "react";
+import { Shimmer } from "../components/Shimmer";
 
 export function FarmerProfilePage() {
   const { id } = useParams<{ id: string }>();
@@ -37,8 +38,17 @@ export function FarmerProfilePage() {
 
   if (farmerLoading || !farmer) {
     return (
-      <div className="text-center py-12 text-green-700 font-medium animate-pulse">
-        🌱 Loading farmer details…
+      <div className="max-w-6xl mx-auto px-4 py-10">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden p-6 space-y-6">
+          <Shimmer width="w-full" height="h-64" className="rounded-xl" />
+          <div className="space-y-4">
+            <Shimmer width="w-1/2" height="h-8" />
+            <Shimmer width="w-3/4" height="h-6" />
+            <Shimmer width="w-full" height="h-4" />
+            <Shimmer width="w-full" height="h-4" />
+            <Shimmer width="w-2/3" height="h-4" />
+          </div>
+        </div>
       </div>
     );
   }

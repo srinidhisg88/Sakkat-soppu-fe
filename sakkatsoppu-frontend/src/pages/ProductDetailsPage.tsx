@@ -10,6 +10,7 @@ import { useToast } from '../hooks/useToast';
 import { useAddToCartBar } from '../hooks/useAddToCartBar';
 import { useStockSubscription } from '../hooks/useStockSubscription';
 import { motion } from 'framer-motion';
+import { Shimmer } from '../components/Shimmer';
 
 export function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -180,7 +181,28 @@ export function ProductDetailsPage() {
   const mainImage = (galleryImages[clampIdx(currentIdx)] || product?.imageUrl || '') as string;
 
   if (productLoading && !product) {
-    return <div className="text-center py-8">Loading product details...</div>;
+    return (
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="grid md:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <Shimmer width="w-full" height="h-96" className="rounded-xl" />
+            <div className="flex gap-2">
+              {[1, 2, 3, 4].map(i => (
+                <Shimmer key={i} width="w-20" height="h-20" className="rounded-lg" />
+              ))}
+            </div>
+          </div>
+          <div className="space-y-4">
+            <Shimmer width="w-3/4" height="h-8" />
+            <Shimmer width="w-1/2" height="h-6" />
+            <Shimmer width="w-full" height="h-4" />
+            <Shimmer width="w-full" height="h-4" />
+            <Shimmer width="w-2/3" height="h-4" />
+            <Shimmer width="w-32" height="h-10" className="rounded-lg mt-6" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!product) {
@@ -298,55 +320,55 @@ export function ProductDetailsPage() {
 
           {inCart ? (
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-700">In your cart</div>
-                <div className="flex items-center border rounded overflow-hidden">
-                  <button
-                    onClick={async () => {
-                      try {
-                        await updateQuantity(product._id, existingQty - 1);
-                      } catch {
-                        show('Failed to update quantity', { type: 'error' });
-                      }
-                    }}
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-100"
-                    aria-label="Decrease quantity"
-                  >
-                    -
-                  </button>
-                  <span className="px-4 py-2 min-w-[3rem] text-center">{existingQty}</span>
-                  <button
-                    onClick={async () => {
-                      if (existingQty + 1 > numericStock) {
-                        show('Cannot exceed available stock', { type: 'warning' });
-                        return;
-                      }
-                      try {
-                        await updateQuantity(product._id, existingQty + 1);
-                      } catch {
-                        show('Failed to update quantity', { type: 'error' });
-                      }
-                    }}
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-100"
-                    aria-label="Increase quantity"
-                  >
-                    +
-                  </button>
-                </div>
+              <div className="text-sm text-gray-700 mb-2">In your cart</div>
+              <div className="flex items-center bg-gray-50 rounded-lg border border-gray-200">
+                <button
+                  onClick={async () => {
+                    try {
+                      await updateQuantity(product._id, existingQty - 1);
+                    } catch {
+                      show('Failed to update quantity', { type: 'error' });
+                    }
+                  }}
+                  className="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors text-xl"
+                  aria-label="Decrease quantity"
+                >
+                  −
+                </button>
+                <span className="flex-1 text-center font-medium text-base">{existingQty}</span>
+                <button
+                  onClick={async () => {
+                    if (existingQty + 1 > numericStock) {
+                      show('Cannot exceed available stock', { type: 'warning' });
+                      return;
+                    }
+                    try {
+                      await updateQuantity(product._id, existingQty + 1);
+                    } catch {
+                      show('Failed to update quantity', { type: 'error' });
+                    }
+                  }}
+                  className="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors text-xl"
+                  aria-label="Increase quantity"
+                >
+                  +
+                </button>
               </div>
             </div>
           ) : (
             <>
               {remaining > 0 && (
-                <div className="flex items-center space-x-3 sm:space-x-4">
-                  <div className="flex items-center border rounded">
+                <div className="space-y-3">
+                  <div className="text-sm text-gray-700">Quantity</div>
+                  <div className="flex items-center bg-gray-50 rounded-lg border border-gray-200">
                     <button
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="px-3 sm:px-4 py-2 text-gray-600 hover:bg-gray-100 active:scale-95"
+                      className="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors text-xl"
+                      aria-label="Decrease quantity"
                     >
-                      -
+                      −
                     </button>
-                    <span className="px-3 sm:px-4 py-2">{quantity}</span>
+                    <span className="flex-1 text-center font-medium text-base">{quantity}</span>
                     <button
                       onClick={() => {
                         if (remaining <= 0) {
@@ -360,30 +382,24 @@ export function ProductDetailsPage() {
                           setQuantity(quantity + 1);
                         }
                       }}
-                      className="px-3 sm:px-4 py-2 text-gray-600 hover:bg-gray-100 active:scale-95"
+                      className="w-12 h-12 flex items-center justify-center text-gray-600 hover:bg-gray-100 transition-colors text-xl"
+                      aria-label="Increase quantity"
                     >
                       +
                     </button>
                   </div>
-                  {/* Stock summary is shown above in detail section */}
                 </div>
               )}
 
               <motion.button
                 onClick={handleAddToCart}
                 disabled={remaining <= 0}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.95 }}
-                animate={{ scale: 1 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 400,
-                  damping: 17
-                }}
-                className={`w-full py-3 rounded-lg font-semibold transition-all ${
+                whileHover={remaining > 0 ? { scale: 1.02 } : {}}
+                whileTap={remaining > 0 ? { scale: 0.98 } : {}}
+                className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all ${
                   remaining > 0
-                    ? 'bg-green-600 text-white hover:bg-green-700 shadow-md hover:shadow-lg active:shadow-sm'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    ? 'bg-green-600 text-white hover:bg-green-700'
+                    : 'bg-gray-300 text-gray-600 cursor-not-allowed'
                 }`}
               >
                 {remaining > 0 ? 'Add to Cart' : 'Out of Stock'}

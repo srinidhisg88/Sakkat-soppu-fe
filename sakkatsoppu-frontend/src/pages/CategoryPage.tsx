@@ -7,23 +7,9 @@ import { getProducts } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
 import { EmptyState } from '../components/EmptyState';
 import { MagnifyingGlassIcon, Squares2X2Icon } from '@heroicons/react/24/outline';
+import { AlertCircle, Search as SearchIcon } from 'lucide-react';
+import { ProductCardShimmer } from '../components/Shimmer';
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: 0.05 }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.4 }
-  }
-};
 
 export function CategoryPage() {
  
@@ -176,31 +162,22 @@ export function CategoryPage() {
 
             {/* Main Content Area */}
             <div className="flex-1 min-w-0">
-              <motion.div
-                initial="hidden"
-                animate="visible"
-                variants={containerVariants}
-                className="space-y-6"
-              >
+              <div className="space-y-6">
                 {/* Header */}
-                <motion.div variants={itemVariants}>
+                <div>
                   <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
                     {selectedCategory || 'All Products'}
                   </h1>
                   <p className="text-gray-600 mt-1">
                     {isLoading ? 'Loading...' : `${filteredProducts.length} products available`}
                   </p>
-                </motion.div>
+                </div>
 
                 {/* Products Grid */}
                 {isLoading ? (
                   <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                     {Array.from({ length: 8 }).map((_, i) => (
-                      <div key={i} className="bg-white rounded-lg shadow-md p-4 animate-pulse">
-                        <div className="w-full h-48 bg-gray-200 rounded-lg mb-4"></div>
-                        <div className="h-4 bg-gray-200 rounded mb-2"></div>
-                        <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                      </div>
+                      <ProductCardShimmer key={i} />
                     ))}
                   </div>
                 ) : isError ? (
@@ -209,6 +186,7 @@ export function CategoryPage() {
                     description="There was an error loading products. Please try again."
                     actionLabel="Retry"
                     actionTo="#"
+                    IconComponent={AlertCircle}
                   />
                 ) : filteredProducts.length === 0 ? (
                   <EmptyState
@@ -216,20 +194,18 @@ export function CategoryPage() {
                     description={searchQuery ? `No products found for "${searchQuery}"` : `No products are currently available${selectedCategory ? ` in ${selectedCategory}` : ''}.`}
                     actionLabel="Browse All Products"
                     actionTo="/categories/all"
+                    IconComponent={SearchIcon}
                   />
                 ) : (
-                  <motion.div
-                    variants={containerVariants}
-                    className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6"
-                  >
+                  <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                     {filteredProducts.map((product) => (
-                      <motion.div key={product._id} variants={itemVariants}>
+                      <div key={product._id}>
                         <ProductCard product={product} />
-                      </motion.div>
+                      </div>
                     ))}
-                  </motion.div>
+                  </div>
                 )}
-              </motion.div>
+              </div>
             </div>
           </div>
         </div>
@@ -318,22 +294,24 @@ export function CategoryPage() {
             {isLoading ? (
               <div className="grid grid-cols-2 gap-3">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="bg-white rounded-lg shadow-md p-3 animate-pulse">
-                    <div className="w-full h-32 bg-gray-200 rounded-lg mb-3"></div>
-                    <div className="h-3 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 rounded w-3/4"></div>
-                  </div>
+                  <ProductCardShimmer key={i} />
                 ))}
               </div>
             ) : isError ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600">Error loading products</p>
+              <div className="px-4">
+                <EmptyState
+                  title="Error Loading Products"
+                  description="There was an error loading products. Please try again."
+                  IconComponent={AlertCircle}
+                />
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600">
-                  {searchQuery ? `No products found for "${searchQuery}"` : 'No products available'}
-                </p>
+              <div className="px-4">
+                <EmptyState
+                  title="No Products Found"
+                  description={searchQuery ? `No products found for "${searchQuery}"` : 'No products available'}
+                  IconComponent={SearchIcon}
+                />
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">

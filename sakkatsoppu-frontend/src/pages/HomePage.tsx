@@ -6,6 +6,7 @@ import { getProducts } from '../services/api';
 import { ProductCard } from '../components/ProductCard';
 import { VideoHeroSection } from '../components/VideoHeroSection';
 import { Link } from 'react-router-dom';
+import { ProductCardShimmer } from '../components/Shimmer';
 // import AboutFarmersSection from '../components/AboutFarmersSection';
 import {
   SparklesIcon,
@@ -31,23 +32,6 @@ const features = [
   }
 ];
 
-const containerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0
-  }
-};
 
 type HomePageProps = { startAnimations?: boolean };
 
@@ -117,20 +101,13 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
       <VideoHeroSection startAnimations={startAnimations} />
 
       {/* Features */}
-      <motion.section
-        variants={containerVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        className="max-w-6xl mx-auto px-4"
-      >
+      <section className="max-w-6xl mx-auto px-4">
         {/* Mobile: Horizontal scroll */}
         <div className="md:hidden -mx-4">
           <div className="flex gap-4 overflow-x-auto px-4 pb-4 scrollbar-hide">
             {features.map((feature, index) => (
-              <motion.div
+              <div
                 key={index}
-                variants={itemVariants}
                 className="group relative bg-white p-4 rounded-xl shadow-md flex-shrink-0 w-[280px] border border-green-100/70"
               >
                 <div className="absolute inset-x-0 top-0 h-1 rounded-t-xl bg-gradient-to-r from-green-500 via-emerald-400 to-green-500" />
@@ -141,7 +118,7 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
                 <p className="text-gray-700 text-sm leading-relaxed">
                   {feature.description}
                 </p>
-              </motion.div>
+              </div>
             ))}
           </div>
         </div>
@@ -149,9 +126,8 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
         {/* Desktop: Grid */}
         <div className="hidden md:grid grid-cols-3 gap-8">
           {features.map((feature, index) => (
-            <motion.div
+            <div
               key={index}
-              variants={itemVariants}
               className="group relative bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all border border-green-100/70 hover:-translate-y-0.5"
             >
               <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-green-500 via-emerald-400 to-green-500" />
@@ -162,10 +138,10 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
               <p className="text-gray-700 text-sm sm:text-base leading-relaxed">
                 {feature.description}
               </p>
-            </motion.div>
+            </div>
           ))}
         </div>
-      </motion.section>
+      </section>
 
       {/* Categories Section */}
       {categories.length > 0 && (
@@ -182,18 +158,11 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
           {/* Horizontally scrollable categories */}
           <div className="relative -mx-4 md:mx-0">
             <div className="overflow-x-auto scrollbar-hide px-4 md:px-0">
-              <motion.div
-                variants={containerVariants}
-                initial="hidden"
-                whileInView="visible"
-                viewport={{ once: true }}
-                className="flex gap-6 pb-4"
-              >
+              <div className="flex gap-6 pb-4">
                 {categories.map((category) => (
-                  <motion.div
+                  <div
                     key={category._id}
-                    variants={itemVariants}
-                    className="flex-shrink-0"
+                    className="flex-shrink-0 animate-fade-in-scale"
                   >
                     <Link
                       to={`/categories/all?category=${encodeURIComponent(category.name)}`}
@@ -214,9 +183,9 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
                         {category.name}
                       </span>
                     </Link>
-                  </motion.div>
+                  </div>
                 ))}
-              </motion.div>
+              </div>
             </div>
           </div>
         </section>
@@ -234,27 +203,19 @@ export const HomePage: React.FC<HomePageProps> = ({ startAnimations = true }) =>
         </motion.h2>
         
         {(isLoading && (!effectiveProducts || effectiveProducts.length === 0)) ? (
-          <div className="text-center py-12">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="inline-block w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full"
-            />
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <ProductCardShimmer key={i} />
+            ))}
           </div>
         ) : effectiveProducts && Array.isArray(effectiveProducts) && effectiveProducts.length > 0 ? (
-          <motion.div
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6"
-          >
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
             {effectiveProducts.map(product => (
-              <motion.div key={product._id} variants={itemVariants} className="h-full">
+              <div key={product._id} className="h-full">
                 <ProductCard product={product} />
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         ) : (
           <div className="text-center py-12 text-gray-600">No products to show.</div>
         )}

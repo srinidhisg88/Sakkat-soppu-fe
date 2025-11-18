@@ -25,7 +25,7 @@ export function MobileBottomNav() {
     },
     {
       path: '/categories/all',
-      label: 'Categories',
+      label: 'Products',
       icon: Squares2X2Icon,
       activeIcon: Squares2X2IconSolid,
     },
@@ -57,7 +57,7 @@ export function MobileBottomNav() {
     },
     {
       path: '/categories/all',
-      label: 'Categories',
+      label: 'Products',
       icon: Squares2X2Icon,
       activeIcon: Squares2X2IconSolid,
     },

@@ -3,6 +3,7 @@ import { useLocation as useRouteLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { updateProfile } from '../services/api';
 import MapAddressModal from '../components/MapAddressModal';
+import { Shimmer } from '../components/Shimmer';
 
 export function ProfilePage() {
   const { user, isAuthenticated, initializing, refreshProfile } = useAuth();
@@ -51,9 +52,30 @@ export function ProfilePage() {
     }
   }, [user]);
 
-  if (initializing) return <div className="py-8 text-center">Loading profile…</div>;
+  if (initializing) {
+    return (
+      <div className="max-w-2xl mx-auto p-6 space-y-4">
+        <Shimmer width="w-48" height="h-8" />
+        <div className="bg-white rounded-lg p-6 space-y-4">
+          <Shimmer width="w-full" height="h-10" />
+          <Shimmer width="w-full" height="h-10" />
+          <Shimmer width="w-full" height="h-24" />
+        </div>
+      </div>
+    );
+  }
   if (!isAuthenticated) return null;
-  if (!user) return <div className="py-8 text-center">Loading user…</div>;
+  if (!user) {
+    return (
+      <div className="max-w-2xl mx-auto p-6 space-y-4">
+        <Shimmer width="w-48" height="h-8" />
+        <div className="bg-white rounded-lg p-6 space-y-4">
+          <Shimmer width="w-full" height="h-10" />
+          <Shimmer width="w-full" height="h-10" />
+        </div>
+      </div>
+    );
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

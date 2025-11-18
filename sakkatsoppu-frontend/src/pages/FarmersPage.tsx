@@ -3,6 +3,9 @@ import { useQuery } from '@tanstack/react-query';
 import { getFarmers } from '../services/api';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import FarmerCard, { FarmerCardItem } from '../components/FarmerCard';
+import { Users, AlertCircle } from 'lucide-react';
+import { EmptyState } from '../components/EmptyState';
+import { Shimmer } from '../components/Shimmer';
 
 type FarmerListItem = FarmerCardItem;
 
@@ -55,7 +58,7 @@ export function FarmersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
         <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-green-700 text-center sm:text-left">
-          🌾 Meet Our Farmers
+          Meet Our Farmers
         </h1>
         <div className="relative w-full sm:w-80">
           <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 absolute left-3 top-3" />
@@ -69,8 +72,24 @@ export function FarmersPage() {
       </div>
 
   {/* Loading & Error */}
-      {isLoading && <div className="py-20 text-center text-lg animate-pulse">🌱 Loading farmers…</div>}
-      {isError && <div className="py-20 text-center text-red-600 text-lg">❌ Failed to load farmers.</div>}
+      {isLoading && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8">
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="bg-white rounded-xl p-4 space-y-3">
+              <Shimmer width="w-full" height="h-32" className="rounded-lg" />
+              <Shimmer width="w-3/4" height="h-5" />
+              <Shimmer width="w-1/2" height="h-4" />
+            </div>
+          ))}
+        </div>
+      )}
+      {isError && (
+        <EmptyState
+          title="Failed to Load Farmers"
+          description="There was an error loading the farmers. Please try again."
+          IconComponent={AlertCircle}
+        />
+      )}
 
       {/* Farmers Grid */}
       {!isLoading && !isError && (
@@ -80,7 +99,7 @@ export function FarmersPage() {
               {list.map(f => (
                 <div
                   key={f._id}
-                  className="transition-transform duration-200 hover:scale-105 hover:shadow-xl"
+                  className="transition-transform duration-200 hover:scale-105 hover:shadow-xl animate-fade-in-scale"
                 >
                   <FarmerCard farmer={f} />
                 </div>
@@ -109,9 +128,11 @@ export function FarmersPage() {
             </div>
           </>
         ) : (
-          <div className="py-20 text-center text-gray-600 text-lg">
-            🌾 No farmers found. Try another search.
-          </div>
+          <EmptyState
+            title="No Farmers Found"
+            description={search ? `No farmers found matching "${search}". Try another search.` : "No farmers are currently available."}
+            IconComponent={Users}
+          />
         )
       )}
       </div>

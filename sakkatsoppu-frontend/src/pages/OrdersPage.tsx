@@ -8,6 +8,8 @@ import { EmptyState } from '../components/EmptyState';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon, MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Package, Search } from 'lucide-react';
+import { Shimmer } from '../components/Shimmer';
 
 export function OrdersPage() {
   const { isAuthenticated } = useAuth();
@@ -164,9 +166,9 @@ export function OrdersPage() {
   }
 };
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header with back button */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+    <div className="h-screen flex flex-col bg-gray-50">
+      {/* Header with back button - Fixed */}
+      <div className="bg-white shadow-sm flex-shrink-0">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-4">
           <button
             onClick={() => navigate('/')}
@@ -179,203 +181,221 @@ export function OrdersPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-4">
-        {/* Search and Filter Bar */}
-        <div className="mb-6 flex gap-3">
-          <div className="flex-1 relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search here..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            />
-          </div>
-          <button
-            onClick={() => setShowFilterMenu(!showFilterMenu)}
-            className="p-3 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-            aria-label="Toggle filter menu"
-          >
-            <FunnelIcon className="h-5 w-5 text-gray-700" />
-          </button>
-        </div>
-
-        {/* Filter Menu */}
-        <AnimatePresence>
-          {showFilterMenu && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mb-4 bg-white rounded-lg border border-gray-200 p-4 overflow-hidden"
+      {/* Search and Filter Bar - Fixed/Sticky */}
+      <div className="bg-gray-50 flex-shrink-0 border-b border-gray-200">
+        <div className="max-w-5xl mx-auto px-4 py-4">
+          <div className="flex gap-3">
+            <div className="flex-1 relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search here..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+            <button
+              onClick={() => setShowFilterMenu(!showFilterMenu)}
+              className="p-3 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+              aria-label="Toggle filter menu"
             >
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Filter by Status</h3>
-              <div className="flex flex-wrap gap-2">
-                {(['all', 'pending', 'confirmed', 'delivered', 'cancelled'] as const).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => {
-                      setStatus(s);
-                      setShowFilterMenu(false);
-                    }}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                      status === s
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              <FunnelIcon className="h-5 w-5 text-gray-700" />
+            </button>
+          </div>
 
-      {isLoading && effectiveOrders.length === 0 && (
-        <div className="py-4">
-          <EmptyState title="Loading orders..." icon={<span>⏳</span>} />
-        </div>
-      )}
-
-      {filtered.length === 0 ? (
-        <div className="py-4">
-          {effectiveOrders.length > 0 && status !== 'all' ? (
-            <EmptyState
-              title={`No orders with status "${status}"`}
-              description="Try switching the status filter to see other orders."
-              icon={<span>🔎</span>}
-            />
-          ) : (
-            <EmptyState
-              title="No Orders Yet"
-              description="You haven't placed any orders yet. Start shopping to place your first order!"
-              actionLabel="Browse Products"
-              actionTo="/products"
-              icon={<span>🧺</span>}
-            />
-          )}
-        </div>
-      ) : null}
-
-        {/* Orders List */}
-        <div className="space-y-4">
-          {filtered.map((order, index) => {
-            const orderStatus = normalizeStatus(order.status as string | undefined);
-
-            return (
+          {/* Filter Menu */}
+          <AnimatePresence>
+            {showFilterMenu && (
               <motion.div
-                key={order._id || order.id || index}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="bg-white rounded-xl shadow-sm p-4 border border-gray-100"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-3 bg-white rounded-lg border border-gray-200 p-4 overflow-hidden"
               >
-                {/* Order Header - Title and Status */}
-                <div className="flex justify-between items-center mb-3">
-                  <div>
-                    <p className="text-xs text-gray-500 mb-1">
-                      {new Date(order.createdAt ?? Date.now()).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </p>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {(() => {
-                        const items = (order.items || []) as Array<{ productId: string; name?: string; product?: Partial<Product> }>;
-                        if (items.length === 0) return 'Order';
-                        const firstItem = items[0];
-                        const pid = firstItem.productId;
-                        const embedded = (typeof firstItem.product === 'object' ? firstItem.product as Partial<Product> : undefined);
-                        const prod: Partial<Product> | undefined = embedded || productMap.get(pid);
-                        const name = firstItem.name || prod?.name || 'Items';
-                        return items.length > 1 ? `${name} +${items.length - 1} more` : name;
-                      })()}
-                    </p>
-                  </div>
-                  <span className={`px-4 py-1.5 rounded-full text-xs font-semibold ${getStatusColor(orderStatus)}`}>
-                    {getStatusLabel(orderStatus)}
-                  </span>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Filter by Status</h3>
+                <div className="flex flex-wrap gap-2">
+                  {(['all', 'pending', 'confirmed', 'delivered', 'cancelled'] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => {
+                        setStatus(s);
+                        setShowFilterMenu(false);
+                      }}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                        status === s
+                          ? 'bg-green-600 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+                    </button>
+                  ))}
                 </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
 
-                {/* Order Items */}
-                <div className="mb-3 space-y-2">
-                  {(() => {
-                    type ExtendedOrderItem = Order['items'][number] & {
-                      id?: string;
-                      product?: Partial<Product> | string;
-                      name?: string;
-                      g?: number;
-                      pieces?: number;
-                      unitLabel?: string;
-                    };
-                    const items = (order.items || []) as unknown as ExtendedOrderItem[];
-                    return items.map((item, idx) => {
-                      const pid = item.productId;
-                      const embedded = (typeof item.product === 'object' ? item.product as Partial<Product> : undefined);
-                      const prod: Partial<Product> | undefined = embedded || productMap.get(pid);
-                      const name = item.name || prod?.name || 'Item';
-                      const grams = typeof item.g === 'number' ? item.g : (typeof prod?.g === 'number' ? prod.g : 0);
-                      const pcs = typeof item.pieces === 'number' ? item.pieces : (typeof prod?.pieces === 'number' ? prod.pieces! : 0);
-                      const unitLabel = deriveUnitLabel({ unitLabel: (item.unitLabel as string | undefined) || (prod?.unitLabel as string | undefined), g: grams, pieces: pcs });
+      {/* Scrollable Orders Container */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="max-w-5xl mx-auto px-4 py-4 pb-20 md:pb-4">
+          {isLoading && effectiveOrders.length === 0 && (
+            <div className="space-y-3">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="bg-white rounded-xl p-4 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2 flex-1">
+                      <Shimmer width="w-32" height="h-5" />
+                      <Shimmer width="w-24" height="h-4" />
+                    </div>
+                    <Shimmer width="w-20" height="h-6" className="rounded-full" />
+                  </div>
+                  <div className="space-y-2">
+                    <Shimmer width="w-full" height="h-4" />
+                    <Shimmer width="w-2/3" height="h-4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-                      return (
-                        <div key={String(item.productId || item.id || idx)} className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-900">{name}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              Qty: {item.quantity}{unitLabel ? ` • ${unitLabel}` : ''}
+          {filtered.length === 0 && !isLoading ? (
+            <div>
+              {effectiveOrders.length > 0 && status !== 'all' ? (
+                <EmptyState
+                  title={`No orders with status "${status}"`}
+                  description="Try switching the status filter to see other orders."
+                  IconComponent={Search}
+                />
+              ) : (
+                <EmptyState
+                  title="No Orders Yet"
+                  description="You haven't placed any orders yet. Start shopping to place your first order!"
+                  actionLabel="Browse Products"
+                  actionTo="/products"
+                  IconComponent={Package}
+                />
+              )}
+            </div>
+          ) : null}
+
+          {/* Orders List */}
+          <div className="space-y-4">
+            {filtered.map((order, index) => {
+              const orderStatus = normalizeStatus(order.status as string | undefined);
+
+              return (
+                <div
+                  key={order._id || order.id || index}
+                  className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 animate-fade-in-scale"
+                >
+                  {/* Order Header - Title and Status */}
+                  <div className="flex justify-between items-center mb-3">
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1">
+                        {new Date(order.createdAt ?? Date.now()).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </p>
+                      <p className="text-sm font-semibold text-gray-900">
+                        {(() => {
+                          const items = (order.items || []) as Array<{ productId: string; name?: string; product?: Partial<Product> }>;
+                          if (items.length === 0) return 'Order';
+                          const firstItem = items[0];
+                          const pid = firstItem.productId;
+                          const embedded = (typeof firstItem.product === 'object' ? firstItem.product as Partial<Product> : undefined);
+                          const prod: Partial<Product> | undefined = embedded || productMap.get(pid);
+                          const name = firstItem.name || prod?.name || 'Items';
+                          return items.length > 1 ? `${name} +${items.length - 1} more` : name;
+                        })()}
+                      </p>
+                    </div>
+                    <span className={`px-4 py-1.5 rounded-full text-xs font-semibold ${getStatusColor(orderStatus)}`}>
+                      {getStatusLabel(orderStatus)}
+                    </span>
+                  </div>
+
+                  {/* Order Items */}
+                  <div className="mb-3 space-y-2">
+                    {(() => {
+                      type ExtendedOrderItem = Order['items'][number] & {
+                        id?: string;
+                        product?: Partial<Product> | string;
+                        name?: string;
+                        g?: number;
+                        pieces?: number;
+                        unitLabel?: string;
+                      };
+                      const items = (order.items || []) as unknown as ExtendedOrderItem[];
+                      return items.map((item, idx) => {
+                        const pid = item.productId;
+                        const embedded = (typeof item.product === 'object' ? item.product as Partial<Product> : undefined);
+                        const prod: Partial<Product> | undefined = embedded || productMap.get(pid);
+                        const name = item.name || prod?.name || 'Item';
+                        const grams = typeof item.g === 'number' ? item.g : (typeof prod?.g === 'number' ? prod.g : 0);
+                        const pcs = typeof item.pieces === 'number' ? item.pieces : (typeof prod?.pieces === 'number' ? prod.pieces! : 0);
+                        const unitLabel = deriveUnitLabel({ unitLabel: (item.unitLabel as string | undefined) || (prod?.unitLabel as string | undefined), g: grams, pieces: pcs });
+
+                        return (
+                          <div key={String(item.productId || item.id || idx)} className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">{name}</p>
+                              <p className="text-xs text-gray-500 mt-0.5">
+                                Qty: {item.quantity}{unitLabel ? ` • ${unitLabel}` : ''}
+                              </p>
+                            </div>
+                            <p className="text-sm font-semibold text-gray-900">
+                              ₹{(Number(item.price) || 0) * Number(item.quantity || 0)}
                             </p>
                           </div>
-                          <p className="text-sm font-semibold text-gray-900">
-                            ₹{(Number(item.price) || 0) * Number(item.quantity || 0)}
-                          </p>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-
-                {/* Pricing Breakdown */}
-                <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
-                  {typeof order.subtotalPrice === 'number' && (
-                    <div className="flex justify-between text-gray-600">
-                      <span>Subtotal</span>
-                      <span>₹{order.subtotalPrice}</span>
-                    </div>
-                  )}
-                  {order.couponCode && typeof order.discountAmount === 'number' && order.discountAmount > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Coupon ({order.couponCode})</span>
-                      <span>-₹{order.discountAmount}</span>
-                    </div>
-                  )}
-                  {typeof order.deliveryFee === 'number' && (
-                    <div className="flex justify-between text-gray-600">
-                      <span>Delivery Fee</span>
-                      <span>{order.deliveryFee === 0 ? 'Free' : `₹${order.deliveryFee}`}</span>
-                    </div>
-                  )}
-
-                  {/* Total */}
-                  <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                    <span className="font-semibold text-gray-900">Total Amount</span>
-                    <span className="text-lg font-bold text-gray-900">₹{order.totalPrice ?? 0}</span>
+                        );
+                      });
+                    })()}
                   </div>
-                </div>
 
-                {/* Delivery Address */}
-                {order.address && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <p className="text-xs text-gray-500 mb-1">Delivery Address</p>
-                    <p className="text-sm text-gray-700">{order.address}</p>
+                  {/* Pricing Breakdown */}
+                  <div className="border-t border-gray-100 pt-3 space-y-1.5 text-sm">
+                    {typeof order.subtotalPrice === 'number' && (
+                      <div className="flex justify-between text-gray-600">
+                        <span>Subtotal</span>
+                        <span>₹{order.subtotalPrice}</span>
+                      </div>
+                    )}
+                    {order.couponCode && typeof order.discountAmount === 'number' && order.discountAmount > 0 && (
+                      <div className="flex justify-between text-green-600">
+                        <span>Coupon ({order.couponCode})</span>
+                        <span>-₹{order.discountAmount}</span>
+                      </div>
+                    )}
+                    {typeof order.deliveryFee === 'number' && (
+                      <div className="flex justify-between text-gray-600">
+                        <span>Delivery Fee</span>
+                        <span>{order.deliveryFee === 0 ? 'Free' : `₹${order.deliveryFee}`}</span>
+                      </div>
+                    )}
+
+                    {/* Total */}
+                    <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                      <span className="font-semibold text-gray-900">Total Amount</span>
+                      <span className="text-lg font-bold text-gray-900">₹{order.totalPrice ?? 0}</span>
+                    </div>
                   </div>
-                )}
-              </motion.div>
-            );
-          })}
+
+                  {/* Delivery Address */}
+                  {order.address && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      <p className="text-xs text-gray-500 mb-1">Delivery Address</p>
+                      <p className="text-sm text-gray-700">{order.address}</p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
