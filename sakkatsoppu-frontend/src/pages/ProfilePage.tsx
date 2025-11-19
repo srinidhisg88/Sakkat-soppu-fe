@@ -5,7 +5,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { updateProfile } from '../services/api';
 import MapAddressModal from '../components/MapAddressModal';
 import { Shimmer } from '../components/Shimmer';
-import { UserCircleIcon, ShoppingBagIcon, LanguageIcon, ChevronRightIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { UserCircleIcon, ShoppingBagIcon, ChevronRightIcon,CheckCircleIcon } from '@heroicons/react/24/outline';
 
 export function ProfilePage() {
   const { user, isAuthenticated, initializing, refreshProfile, avatarUrl } = useAuth();
@@ -14,6 +14,7 @@ export function ProfilePage() {
   const routeLocation = useRouteLocation();
   const promptComplete = ((routeLocation.state as unknown as { promptComplete?: boolean })?.promptComplete) || false;
   const [activeSection, setActiveSection] = useState<'overview' | 'profile' | 'orders'>('overview');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [isEditing, setIsEditing] = useState<boolean>(promptComplete);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -272,6 +273,7 @@ export function ProfilePage() {
     </div>
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const renderLanguageSelector = () => {
     const languages = [
       { code: 'en' as const, name: t('language.english'), flag: '🇬🇧' },
