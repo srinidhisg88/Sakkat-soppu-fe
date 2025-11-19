@@ -5,11 +5,11 @@ import { useLanguage } from '../context/LanguageContext';
 import { updateProfile } from '../services/api';
 import MapAddressModal from '../components/MapAddressModal';
 import { Shimmer } from '../components/Shimmer';
-import { UserCircleIcon, ShoppingBagIcon, ChevronRightIcon,CheckCircleIcon } from '@heroicons/react/24/outline';
+import { UserCircleIcon, ShoppingBagIcon, ChevronRightIcon,/*CheckCircleIcon*/ } from '@heroicons/react/24/outline';
 
 export function ProfilePage() {
   const { user, isAuthenticated, initializing, refreshProfile, avatarUrl } = useAuth();
-  const { language, setLanguage, t } = useLanguage();
+  const { /*language,*/ /*setLanguage */ t } = useLanguage();
   const navigate = useNavigate();
   const routeLocation = useRouteLocation();
   const promptComplete = ((routeLocation.state as unknown as { promptComplete?: boolean })?.promptComplete) || false;
@@ -135,14 +135,14 @@ export function ProfilePage() {
     }
   };
 
-  const handleLanguageChange = (lang: 'en' | 'hi' | 'kn') => {
-    setLanguage(lang);
-    setSuccess(t('profile.updateSuccess'));
-    setTimeout(() => {
-      setActiveSection('overview');
-      setSuccess('');
-    }, 1000);
-  };
+  // const handleLanguageChange = (lang: 'en' | 'hi' | 'kn') => {
+  //   setLanguage(lang);
+  //   setSuccess(t('profile.updateSuccess'));
+  //   setTimeout(() => {
+  //     setActiveSection('overview');
+  //     setSuccess('');
+  //   }, 1000);
+  // };
 
   const menuItems = [
     {
@@ -274,59 +274,59 @@ export function ProfilePage() {
   );
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const  _renderLanguageSelector = () => {
-    const languages = [
-      { code: 'en' as const, name: t('language.english'), flag: '🇬🇧' },
-      { code: 'hi' as const, name: t('language.hindi'), flag: '🇮🇳' },
-      { code: 'kn' as const, name: t('language.kannada'), flag: '🇮🇳' },
-    ];
+  // const  _renderLanguageSelector = () => {
+  //   const languages = [
+  //     { code: 'en' as const, name: t('language.english'), flag: '🇬🇧' },
+  //     { code: 'hi' as const, name: t('language.hindi'), flag: '🇮🇳' },
+  //     { code: 'kn' as const, name: t('language.kannada'), flag: '🇮🇳' },
+  //   ];
 
-    return (
-      <div className="bg-white rounded-2xl p-6 space-y-6">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-800">{t('language.title')}</h2>
-          <button
-            onClick={() => setActiveSection('overview')}
-            className="text-sm text-gray-600 hover:text-gray-800"
-          >
-            {t('profile.cancel')}
-          </button>
-        </div>
+  //   return (
+  //     <div className="bg-white rounded-2xl p-6 space-y-6">
+  //       <div className="flex items-center justify-between">
+  //         <h2 className="text-xl font-bold text-gray-800">{t('language.title')}</h2>
+  //         <button
+  //           onClick={() => setActiveSection('overview')}
+  //           className="text-sm text-gray-600 hover:text-gray-800"
+  //         >
+  //           {t('profile.cancel')}
+  //         </button>
+  //       </div>
 
-        {success && (
-          <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg text-sm">
-            {success}
-          </div>
-        )}
+  //       {success && (
+  //         <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg text-sm">
+  //           {success}
+  //         </div>
+  //       )}
 
-        <p className="text-sm text-gray-600">{t('language.selectLanguage')}</p>
+  //       <p className="text-sm text-gray-600">{t('language.selectLanguage')}</p>
 
-        <div className="space-y-3">
-          {languages.map((lang) => (
-            <button
-              key={lang.code}
-              onClick={() => handleLanguageChange(lang.code)}
-              className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
-                language === lang.code
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-gray-200 hover:border-green-300 hover:bg-gray-50'
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-3xl">{lang.flag}</span>
-                <span className={`font-medium ${language === lang.code ? 'text-green-900' : 'text-gray-800'}`}>
-                  {lang.name}
-                </span>
-              </div>
-              {language === lang.code && (
-                <CheckCircleIcon className="h-6 w-6 text-green-600" />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  };
+  //       <div className="space-y-3">
+  //         {languages.map((lang) => (
+  //           <button
+  //             key={lang.code}
+  //             onClick={() => handleLanguageChange(lang.code)}
+  //             className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
+  //               language === lang.code
+  //                 ? 'border-green-500 bg-green-50'
+  //                 : 'border-gray-200 hover:border-green-300 hover:bg-gray-50'
+  //             }`}
+  //           >
+  //             <div className="flex items-center gap-3">
+  //               <span className="text-3xl">{lang.flag}</span>
+  //               <span className={`font-medium ${language === lang.code ? 'text-green-900' : 'text-gray-800'}`}>
+  //                 {lang.name}
+  //               </span>
+  //             </div>
+  //             {language === lang.code && (
+  //               <CheckCircleIcon className="h-6 w-6 text-green-600" />
+  //             )}
+  //           </button>
+  //         ))}
+  //       </div>
+  //     </div>
+  //   );
+  // };
 
   return (
     <div className="min-h-screen bg-gray-50">
