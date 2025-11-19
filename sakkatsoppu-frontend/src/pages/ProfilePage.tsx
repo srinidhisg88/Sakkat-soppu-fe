@@ -274,7 +274,7 @@ export function ProfilePage() {
   );
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _renderLanguageSelector = () => {
+  const  _renderLanguageSelector = () => {
     const languages = [
       { code: 'en' as const, name: t('language.english'), flag: '🇬🇧' },
       { code: 'hi' as const, name: t('language.hindi'), flag: '🇮🇳' },
