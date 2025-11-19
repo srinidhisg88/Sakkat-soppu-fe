@@ -15,7 +15,7 @@ export function ProfilePage() {
   const promptComplete = ((routeLocation.state as unknown as { promptComplete?: boolean })?.promptComplete) || false;
   const [activeSection, setActiveSection] = useState<'overview' | 'profile' | 'orders'>('overview');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [isEditing, setIsEditing] = useState<boolean>(promptComplete);
+  const [_isEditing, setIsEditing] = useState<boolean>(promptComplete);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [mapOpen, setMapOpen] = useState(false);
@@ -274,12 +274,12 @@ export function ProfilePage() {
   );
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const renderLanguageSelector = () => {
-    const languages = [
-      { code: 'en' as const, name: t('language.english'), flag: '🇬🇧' },
-      { code: 'hi' as const, name: t('language.hindi'), flag: '🇮🇳' },
-      { code: 'kn' as const, name: t('language.kannada'), flag: '🇮🇳' },
-    ];
+  // const _renderLanguageSelector = () => {
+  //   const languages = [
+  //     { code: 'en' as const, name: t('language.english'), flag: '🇬🇧' },
+  //     { code: 'hi' as const, name: t('language.hindi'), flag: '🇮🇳' },
+  //     { code: 'kn' as const, name: t('language.kannada'), flag: '🇮🇳' },
+  //   ];
 
     return (
       <div className="bg-white rounded-2xl p-6 space-y-6">
