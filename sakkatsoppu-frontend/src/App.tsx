@@ -7,6 +7,7 @@ import RequireAuth from './components/RequireAuth';
 import SplashScreen from './components/SplashScreen';
 import { AuthProvider } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { LanguageProvider } from './context/LanguageContext';
 
 // Lazy load all pages for better performance
 const HomePage = lazy(() => import('./pages/HomePage').then(module => ({ default: module.HomePage })));
@@ -47,10 +48,11 @@ function App() {
   const [splashDone, setSplashDone] = useState(false);
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <ToastProvider>
-          <CartProvider>
-          <Router>
+      <LanguageProvider>
+        <AuthProvider>
+          <ToastProvider>
+            <CartProvider>
+            <Router>
             <AddToCartBarProvider>
             <StockProvider>
             <PoliciesModalProvider whatsappNumber={'+91 9980761856'}>
@@ -141,6 +143,7 @@ function App() {
           </CartProvider>
         </ToastProvider>
       </AuthProvider>
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }

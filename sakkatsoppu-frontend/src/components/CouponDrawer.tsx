@@ -170,16 +170,16 @@ export default function CouponDrawer({ isOpen, onClose, coupons, totalAmount, ap
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          className="fixed inset-0 z-50"
+          className="fixed inset-0 z-40"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
         >
           {/* Backdrop */}
           <div className="absolute inset-0 bg-black/30" onClick={onClose} />
-          {/* Drawer */}
+          {/* Drawer - Below bottom nav on mobile */}
           <motion.div
-            className="absolute inset-x-0 bottom-0 bg-gray-50 rounded-t-2xl shadow-2xl max-h-[85vh] overflow-auto"
+            className="absolute inset-x-0 bottom-0 md:bottom-0 bg-gray-50 rounded-t-2xl shadow-2xl max-h-[calc(85vh-4rem)] md:max-h-[85vh] overflow-auto mb-16 md:mb-0"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
@@ -210,7 +210,7 @@ export default function CouponDrawer({ isOpen, onClose, coupons, totalAmount, ap
               </div>
             </div>
 
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 pb-6">
               {parsed.eligible.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-gray-600">Eligible for you</p>

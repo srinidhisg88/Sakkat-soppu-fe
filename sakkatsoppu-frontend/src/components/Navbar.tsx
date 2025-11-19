@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { useLanguage } from '../context/LanguageContext';
 import {
   HomeIcon,
   ShoppingBagIcon,
@@ -15,6 +16,7 @@ import {
 export function Navbar() {
   const { isAuthenticated, user, logout, avatarUrl } = useAuth();
   const { uniqueItems } = useCart();
+  const { t } = useLanguage();
 
   // Resolve logo file path via Vite's asset handling
   const legacyLogoUrl = new URL('../../logo.jpeg', import.meta.url).href;
@@ -54,7 +56,7 @@ export function Navbar() {
               className="text-lg sm:text-xl font-bold bg-gradient-to-r from-green-600 to-green-400 bg-clip-text text-transparent"
               whileHover={{ scale: 1.05 }}
             >
-              Sakkat Soppu
+              Sakkat Soppu Online
             </motion.span>
           </Link>
 
@@ -62,7 +64,7 @@ export function Navbar() {
           <div className="md:hidden flex items-center gap-2">
             <Link to="/about" className="flex items-center space-x-1 py-2 px-3 rounded-lg hover:bg-green-50 transition-colors">
               <InformationCircleIcon className="h-5 w-5 text-green-600" />
-              <span className="text-sm">About Us</span>
+              <span className="text-sm">{t('nav.aboutUs')}</span>
             </Link>
             {isAuthenticated ? (
               <button
@@ -70,11 +72,11 @@ export function Navbar() {
                 className="flex items-center space-x-1 py-2 px-3 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
               >
                 <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                <span className="text-sm">Logout</span>
+                <span className="text-sm">{t('nav.logout')}</span>
               </button>
             ) : (
               <Link to="/login" className="py-2 px-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm">
-                Login
+                {t('nav.login')}
               </Link>
             )}
           </div>
@@ -88,7 +90,7 @@ export function Navbar() {
             >
               <Link to="/" className="flex items-center space-x-1 py-2 px-3 rounded-lg group-hover:bg-green-50 transition-colors">
                 <HomeIcon className="h-5 w-5 text-green-600" />
-                <span>Home</span>
+                <span>{t('nav.home')}</span>
               </Link>
             </motion.div>
 
@@ -99,7 +101,7 @@ export function Navbar() {
             >
               <Link to="/categories/all" className="flex items-center space-x-1 py-2 px-3 rounded-lg group-hover:bg-green-50 transition-colors">
                 <ShoppingBagIcon className="h-5 w-5 text-green-600" />
-                <span>Products</span>
+                <span>{t('nav.products')}</span>
               </Link>
             </motion.div>
 
@@ -110,7 +112,7 @@ export function Navbar() {
             >
               <Link to="/about" className="flex items-center space-x-1 py-2 px-3 rounded-lg group-hover:bg-green-50 transition-colors">
                 <InformationCircleIcon className="h-5 w-5 text-green-600" />
-                <span>About Us</span>
+                <span>{t('nav.aboutUs')}</span>
               </Link>
             </motion.div>
 
@@ -147,7 +149,7 @@ export function Navbar() {
                     </motion.span>
                   )}
                 </div>
-                <span>Cart</span>
+                <span>{t('nav.cart')}</span>
               </Link>
             </motion.div>
 
@@ -159,7 +161,7 @@ export function Navbar() {
             >
               <Link to="/orders" className="flex items-center space-x-1 py-2 px-3 rounded-lg group-hover:bg-green-50 transition-colors">
                 <ClipboardDocumentListIcon className="h-5 w-5 text-green-600" />
-                <span>Orders</span>
+                <span>{t('nav.orders')}</span>
               </Link>
             </motion.div>
 
@@ -189,7 +191,7 @@ export function Navbar() {
                   className="flex items-center space-x-1 py-2 px-3 rounded-lg hover:bg-red-50 text-red-600 transition-colors"
                 >
                   <ArrowRightOnRectangleIcon className="h-5 w-5" />
-                  <span>Logout</span>
+                  <span>{t('nav.logout')}</span>
                 </motion.button>
               </>
             ) : (
@@ -199,7 +201,7 @@ export function Navbar() {
                   whileHover="hover"
                 >
                   <Link to="/login" className="py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                    Login
+                    {t('nav.login')}
                   </Link>
                 </motion.div>
 
@@ -208,7 +210,7 @@ export function Navbar() {
                   whileHover="hover"
                 >
                   <Link to="/signup" className="py-2 px-4 border-2 border-green-600 text-green-600 rounded-lg hover:bg-green-50 transition-colors">
-                    Sign Up
+                    {t('nav.signup')}
                   </Link>
                 </motion.div>
               </>

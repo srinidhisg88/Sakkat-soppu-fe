@@ -1,14 +1,19 @@
 import { useEffect, useState } from 'react';
-import { useLocation as useRouteLocation } from 'react-router-dom';
+import { useLocation as useRouteLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
 import { updateProfile } from '../services/api';
 import MapAddressModal from '../components/MapAddressModal';
 import { Shimmer } from '../components/Shimmer';
+import { UserCircleIcon, ShoppingBagIcon, LanguageIcon, ChevronRightIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 
 export function ProfilePage() {
-  const { user, isAuthenticated, initializing, refreshProfile } = useAuth();
+  const { user, isAuthenticated, initializing, refreshProfile, avatarUrl } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
+  const navigate = useNavigate();
   const routeLocation = useRouteLocation();
   const promptComplete = ((routeLocation.state as unknown as { promptComplete?: boolean })?.promptComplete) || false;
+  const [activeSection, setActiveSection] = useState<'overview' | 'profile' | 'orders'>('overview');
   const [isEditing, setIsEditing] = useState<boolean>(promptComplete);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -85,6 +90,7 @@ export function ProfilePage() {
     }));
   };
 
+
   const handleMapConfirm = (data: { address: { houseNo: string; landmark: string; area: string; city: string; state: string; pincode: string }; latitude: number; longitude: number }) => {
     setFormData(prev => ({
       ...prev,
@@ -122,154 +128,246 @@ export function ProfilePage() {
         });
       }
       setIsEditing(false);
+      setActiveSection('overview');
     } catch (err) {
       setError('Failed to update profile');
     }
   };
 
-  return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-8">My Profile</h1>
+  const handleLanguageChange = (lang: 'en' | 'hi' | 'kn') => {
+    setLanguage(lang);
+    setSuccess(t('profile.updateSuccess'));
+    setTimeout(() => {
+      setActiveSection('overview');
+      setSuccess('');
+    }, 1000);
+  };
 
-      {((routeLocation.state as unknown as { promptComplete?: boolean })?.promptComplete) && (
-        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 px-4 py-3 text-sm">
-          Complete your profile to finish sign-in
-        </div>
-      )}
+  const menuItems = [
+    {
+      id: 'profile' as const,
+      label: t('profile.myProfile'),
+      icon: UserCircleIcon,
+      bgColor: 'bg-blue-50',
+      iconColor: 'text-blue-600',
+    },
+    {
+      id: 'orders' as const,
+      label: t('profile.myOrders'),
+      icon: ShoppingBagIcon,
+      bgColor: 'bg-green-50',
+      iconColor: 'text-green-600',
+      onClick: () => navigate('/orders'),
+    },
+  ];
+
+  const formatPhoneNumber = (phone: string) => {
+    return `+91${phone}`;
+  };
+
+  const renderOverview = () => (
+    <div className="space-y-4">
+      {menuItems.map((item) => (
+        <button
+          key={item.id}
+          onClick={() => item.onClick ? item.onClick() : setActiveSection(item.id)}
+          className="w-full flex items-center justify-between p-4 bg-white rounded-2xl hover:shadow-md transition-all"
+        >
+          <div className="flex items-center gap-4">
+            <div className={`p-3 rounded-xl ${item.bgColor}`}>
+              <item.icon className={`h-6 w-6 ${item.iconColor}`} />
+            </div>
+            <span className="font-medium text-gray-800">{item.label}</span>
+          </div>
+          <ChevronRightIcon className="h-5 w-5 text-gray-400" />
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderProfileEdit = () => (
+    <div className="bg-white rounded-2xl p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-bold text-gray-800">{t('profile.editProfile')}</h2>
+        <button
+          onClick={() => setActiveSection('overview')}
+          className="text-sm text-gray-600 hover:text-gray-800"
+        >
+          {t('profile.cancel')}
+        </button>
+      </div>
 
       {error && (
-        <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-6">
+        <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg text-sm">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-100 text-green-700 p-3 rounded-lg mb-6">
+        <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg text-sm">
           {success}
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow p-6">
-        {isEditing ? (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label 
-                htmlFor="name" 
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Full Name
-              </label>
-              <input
-                id="name"
-                name="name"
-                type="text"
-                required
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1.5">
+            {t('profile.fullName')}
+          </label>
+          <input
+            id="name"
+            name="name"
+            type="text"
+            required
+            value={formData.name}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1.5">
+            {t('profile.phoneNumber')}
+          </label>
+          <input
+            id="phone"
+            name="phone"
+            type="tel"
+            required
+            value={formData.phone}
+            onChange={handleChange}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">
+            {t('profile.address')}
+          </label>
+          <div className="space-y-3">
+            <div className="px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-700 min-h-[3rem]">
+              {formData.address.houseNo || formData.address.area || formData.address.landmark || formData.address.city || formData.address.state || formData.address.pincode
+                ? [formData.address.houseNo, formData.address.area, formData.address.landmark, formData.address.city, formData.address.state, formData.address.pincode]
+                    .filter(Boolean)
+                    .join(', ')
+                : t('profile.noAddressSet')}
             </div>
-
-            <div>
-              <label 
-                htmlFor="phone" 
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Phone Number
-              </label>
-              <input
-                id="phone"
-                name="phone"
-                type="tel"
-                required
-                value={formData.phone}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Address
-              </label>
-              <div className="space-y-2">
-                <div className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 min-h-[2.5rem]">
-                  {formData.address.houseNo || formData.address.area || formData.address.landmark || formData.address.city || formData.address.state || formData.address.pincode
-                    ? [formData.address.houseNo, formData.address.area, formData.address.landmark, formData.address.city, formData.address.state, formData.address.pincode]
-                        .filter(Boolean)
-                        .join(', ')
-                    : 'No address set'}
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setMapOpen(true)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                  >
-                    Edit address
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Coordinates hidden per requirement; still stored in formData for API */}
-
-            <div className="flex space-x-4">
-              <button
-                type="submit"
-                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700"
-              >
-                Save Changes
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                className="flex-1 bg-gray-200 text-gray-800 py-2 px-4 rounded-lg font-semibold hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-sm font-medium text-gray-700">Full Name</h2>
-              <p className="mt-1">{user.name}</p>
-            </div>
-
-            <div>
-              <h2 className="text-sm font-medium text-gray-700">Email</h2>
-              <p className="mt-1">{user.email}</p>
-            </div>
-
-            <div>
-              <h2 className="text-sm font-medium text-gray-700">Phone Number</h2>
-              <p className="mt-1">{user.phone}</p>
-            </div>
-
-            <div>
-              <h2 className="text-sm font-medium text-gray-700">Address</h2>
-              <p className="mt-1">
-                {user.address && typeof user.address === 'object' && 'houseNo' in user.address
-                  ? [user.address.houseNo, user.address.area, user.address.landmark, user.address.city, user.address.state, user.address.pincode]
-                      .filter(Boolean)
-                      .join(', ')
-                  : typeof user.address === 'string'
-                  ? user.address
-                  : 'Not provided'}
-              </p>
-            </div>
-
-            {/* Coordinates hidden per requirement on read-only view */}
-
             <button
-              onClick={() => setIsEditing(true)}
-              className="w-full bg-green-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-green-700"
+              type="button"
+              onClick={() => setMapOpen(true)}
+              className="w-full px-4 py-3 bg-blue-50 text-blue-800 rounded-xl hover:bg-blue-100 border-2 border-blue-200 font-medium transition-all"
             >
-              Edit Profile
+              📍 {t('profile.editAddress')}
             </button>
           </div>
+        </div>
+
+        <button
+          type="submit"
+          className="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-3 px-4 rounded-xl font-semibold hover:from-green-700 hover:to-green-800 transition-all shadow-lg"
+        >
+          {t('profile.saveChanges')}
+        </button>
+      </form>
+    </div>
+  );
+
+  const renderLanguageSelector = () => {
+    const languages = [
+      { code: 'en' as const, name: t('language.english'), flag: '🇬🇧' },
+      { code: 'hi' as const, name: t('language.hindi'), flag: '🇮🇳' },
+      { code: 'kn' as const, name: t('language.kannada'), flag: '🇮🇳' },
+    ];
+
+    return (
+      <div className="bg-white rounded-2xl p-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-gray-800">{t('language.title')}</h2>
+          <button
+            onClick={() => setActiveSection('overview')}
+            className="text-sm text-gray-600 hover:text-gray-800"
+          >
+            {t('profile.cancel')}
+          </button>
+        </div>
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 text-green-700 p-3 rounded-lg text-sm">
+            {success}
+          </div>
         )}
+
+        <p className="text-sm text-gray-600">{t('language.selectLanguage')}</p>
+
+        <div className="space-y-3">
+          {languages.map((lang) => (
+            <button
+              key={lang.code}
+              onClick={() => handleLanguageChange(lang.code)}
+              className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all ${
+                language === lang.code
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-gray-200 hover:border-green-300 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">{lang.flag}</span>
+                <span className={`font-medium ${language === lang.code ? 'text-green-900' : 'text-gray-800'}`}>
+                  {lang.name}
+                </span>
+              </div>
+              {language === lang.code && (
+                <CheckCircleIcon className="h-6 w-6 text-green-600" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header Section with dark green background and decorative shapes */}
+      <div className="relative bg-gradient-to-br from-green-800 via-green-700 to-green-900 overflow-hidden pb-20 pt-8 md:pt-12">
+        {/* Decorative shapes */}
+        <div className="absolute top-0 left-0 w-32 h-32 bg-green-600 opacity-30 rounded-full -translate-x-12 -translate-y-12"></div>
+        <div className="absolute top-10 right-10 w-24 h-24 bg-green-900 opacity-20 rounded-full"></div>
+        <div className="absolute bottom-10 left-1/4 w-20 h-20 bg-green-600 opacity-25 rounded-full"></div>
+        <div className="absolute top-1/3 right-1/3 w-16 h-16 bg-green-800 opacity-20 rounded-full"></div>
+        <div className="absolute bottom-20 right-20 w-28 h-28 bg-green-900 opacity-15 rounded-full"></div>
+
+        {/* Profile Header Content */}
+        <div className="relative z-10 max-w-2xl mx-auto px-4 text-center">
+          <h1 className="text-2xl font-bold text-white mb-8">{t('profile.title')}</h1>
+
+          {/* Avatar */}
+          <div className="relative inline-block mb-4">
+            <div className="w-32 h-32 rounded-full bg-white overflow-hidden border-4 border-white shadow-xl">
+              {avatarUrl ? (
+                <img src={avatarUrl} alt={user.name || 'Profile'} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-green-100 to-green-200">
+                  <UserCircleIcon className="w-20 h-20 text-green-700" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* User Info */}
+          <h2 className="text-2xl font-bold text-white mb-2">{user.name}</h2>
+          <p className="text-green-100 text-lg">{formatPhoneNumber(user.phone)}</p>
+        </div>
+      </div>
+
+      {/* Account Overview Section */}
+      <div className="relative z-20 -mt-12 max-w-2xl mx-auto px-4 pb-20 md:pb-8">
+        <div className="bg-white rounded-t-3xl shadow-xl p-6">
+          <h3 className="text-lg font-bold text-gray-800 mb-6">{t('profile.accountOverview')}</h3>
+
+          {activeSection === 'overview' && renderOverview()}
+          {activeSection === 'profile' && renderProfileEdit()}
+        </div>
       </div>
 
       <MapAddressModal

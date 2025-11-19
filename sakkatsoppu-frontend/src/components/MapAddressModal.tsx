@@ -218,27 +218,34 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
   if (!isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-stretch md:items-center justify-center bg-black/40 p-0 md:p-4 overflow-y-auto">
-      <div className="w-full md:max-w-3xl bg-white rounded-none md:rounded-xl shadow-lg border border-gray-200 mx-0 md:mx-auto my-0 md:my-8 h-screen md:max-h-[92vh] overflow-y-auto flex flex-col">
-        <div className="p-4 border-b flex items-center gap-2">
+    <div className="fixed inset-0 z-[9999] flex items-stretch md:items-center justify-center bg-white md:bg-black/40 p-0 md:p-4 overflow-y-auto">
+      <div className="w-full md:max-w-3xl bg-white rounded-none md:rounded-2xl shadow-2xl border-0 md:border border-gray-200 mx-0 md:mx-auto my-0 md:my-8 h-screen md:max-h-[92vh] overflow-y-auto flex flex-col">
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-gradient-to-r from-green-50 to-blue-50 border-b-2 border-green-200 p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-green-900">📍 Set Delivery Address</h2>
+            <button onClick={onClose} className="p-2 text-gray-700 hover:bg-white rounded-xl transition-all">
+              <span className="text-xl">✕</span>
+            </button>
+          </div>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search address or place"
-            className="flex-1 px-3 py-2 border rounded-md"
+            placeholder="Search for your address or landmark..."
+            className="w-full px-4 py-3 border-2 border-green-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
-          <button onClick={onClose} className="px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md">Close</button>
         </div>
         {results.length > 0 && (
-          <div className="max-h-48 overflow-auto border-b">
+          <div className="max-h-48 overflow-auto border-b bg-green-50">
+            <p className="text-xs font-semibold text-gray-600 px-4 py-2 bg-white border-b">Search Results:</p>
             {results.map((r, idx) => (
               <button
                 key={`${r.lat}-${r.lon}-${idx}`}
                 onClick={() => pickResult(r)}
-                className="block w-full text-left px-4 py-2 hover:bg-gray-50"
+                className="block w-full text-left px-4 py-3 text-sm hover:bg-green-100 border-b border-green-100 last:border-0 transition-colors"
               >
-                {r.displayName}
+                <span className="text-green-700">📍</span> {r.displayName}
               </button>
             ))}
           </div>
@@ -274,83 +281,87 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
             </MapContainer>
           </div>
         )}
-        <div className="p-4 border-t space-y-3">
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">Flat / House No.</label>
-              <input
-                value={flatNo}
-                onChange={(e) => setFlatNo(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="e.g., 12A"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">Landmark</label>
-              <input
-                value={landmark}
-                onChange={(e) => setLandmark(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="Near park / temple / mall"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-sm text-gray-700 mb-1">Street / Area</label>
-              <textarea
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                rows={2}
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="Street name, locality"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">City</label>
-              <input
-                value={city}
-                readOnly
-                aria-readonly
-                className="w-full px-3 py-2 border rounded-md bg-gray-50 text-gray-700 cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">State</label>
-              <input
-                value={stateName}
-                readOnly
-                aria-readonly
-                className="w-full px-3 py-2 border rounded-md bg-gray-50 text-gray-700 cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-700 mb-1">Pincode</label>
-              <input
-                value={pincode}
-                onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                className={`w-full px-3 py-2 border rounded-md ${pinInvalid ? 'border-red-400' : ''}`}
-                inputMode="numeric"
-                pattern="\\d{6}"
-                maxLength={6}
-                aria-invalid={pinInvalid}
-              />
-              {pinInvalid && (
-                <p className="mt-1 text-[11px] text-red-600">Enter a valid 6-digit pincode</p>
-              )}
+        <div className="p-4 border-t bg-gradient-to-b from-white to-green-50 space-y-3">
+          {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded-lg border border-red-200">{error}</p>}
+          <div className="bg-white rounded-2xl p-4 border-2 border-green-100 space-y-3">
+            <h3 className="text-sm font-bold text-green-900 mb-2">Complete Your Address</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Flat / House No. *</label>
+                <input
+                  value={flatNo}
+                  onChange={(e) => setFlatNo(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-green-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  placeholder="e.g., 12A"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Landmark</label>
+                <input
+                  value={landmark}
+                  onChange={(e) => setLandmark(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-green-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  placeholder="Near park / temple / mall"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-700 mb-1">Street / Area *</label>
+                <textarea
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  rows={2}
+                  className="w-full px-3 py-2 border-2 border-green-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  placeholder="Street name, locality"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">City</label>
+                <input
+                  value={city}
+                  readOnly
+                  aria-readonly
+                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">State</label>
+                <input
+                  value={stateName}
+                  readOnly
+                  aria-readonly
+                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Pincode</label>
+                <input
+                  value={pincode}
+                  onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  className={`w-full px-3 py-2 border-2 rounded-xl text-sm focus:outline-none focus:ring-2 ${pinInvalid ? 'border-red-400 focus:ring-red-500' : 'border-green-200 focus:ring-green-500 focus:border-transparent'}`}
+                  inputMode="numeric"
+                  pattern="\\d{6}"
+                  maxLength={6}
+                  aria-invalid={pinInvalid}
+                  placeholder="6-digit pincode"
+                />
+                {pinInvalid && (
+                  <p className="mt-1 text-[11px] text-red-600">Enter a valid 6-digit pincode</p>
+                )}
+              </div>
             </div>
           </div>
           {/* Composed preview */}
-          <div className="text-xs text-gray-600">
-            <span className="font-medium">Preview:</span>
-            <div className="mt-1 whitespace-pre-line">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+            <span className="text-xs font-semibold text-gray-700">📝 Address Preview:</span>
+            <div className="mt-1.5 text-xs text-gray-700 whitespace-pre-line">
               {[flatNo, address, landmark, city, stateName, pincode]
                 .map((s) => (s || '').trim())
                 .filter(Boolean)
-                .join('\n') || '—'}
+                .join(', ') || 'Fill in the details above'}
             </div>
           </div>
           {showSaveCheckbox && (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 bg-blue-50 border border-blue-200 rounded-xl p-3">
               <input
                 type="checkbox"
                 id="save-address"
@@ -358,30 +369,28 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
                 onChange={(e) => setSaveToProfile(e.target.checked)}
                 className="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500"
               />
-              <label htmlFor="save-address" className="text-sm text-gray-700">
+              <label htmlFor="save-address" className="text-xs text-gray-700 font-medium">
                 {saveCheckboxLabel}
               </label>
             </div>
           )}
-          <div className="sticky bottom-0 left-0 right-0 bg-white/95 backdrop-blur supports-[backdrop-filter]:backdrop-blur border-t border-gray-200 -mx-4 px-4 pt-3 mt-2 flex items-center justify-between">
-            <div className="text-xs text-gray-600">
-              {showMap ? (
-                marker ? (
-                  <span>Lat: {marker.lat.toFixed(5)} • Lon: {marker.lon.toFixed(5)}</span>
+          <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent backdrop-blur-sm border-t-2 border-green-200 -mx-4 px-4 pt-4 pb-2 mt-2 space-y-3">
+            {showMap && (
+              <div className="text-[10px] text-gray-600 text-center bg-green-50 py-1.5 px-2 rounded-lg">
+                {marker ? (
+                  <span>📍 Lat: {marker.lat.toFixed(5)} • Lon: {marker.lon.toFixed(5)}</span>
                 ) : (
-                  <span>Select a point on the map</span>
-                )
-              ) : (
-                <span>Enter address details manually</span>
-              )}
-              {loading && <span className="ml-2">· Loading…</span>}
-            </div>
+                  <span>🗺️ Tap on map to set location</span>
+                )}
+                {loading && <span className="ml-2">• Loading…</span>}
+              </div>
+            )}
             <button
               onClick={() => {
                 // Use default coordinates if map is disabled
                 const finalLat = showMap && marker ? marker.lat : (defaultCenter?.lat || FALLBACK_CENTER.lat);
                 const finalLon = showMap && marker ? marker.lon : (defaultCenter?.lon || FALLBACK_CENTER.lon);
-                
+
                 const addressObj = {
                   houseNo: flatNo.trim(),
                   landmark: landmark.trim(),
@@ -394,9 +403,9 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
                 onClose();
               }}
               disabled={pinInvalid || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0)}
-              className={`px-4 py-2 rounded-md text-white w-full md:w-auto ${pinInvalid || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0) ? 'bg-gray-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}
+              className={`w-full py-4 rounded-2xl text-white font-bold text-base transition-all ${pinInvalid || [flatNo, address, landmark, city, stateName, pincode].every((s) => (s || '').trim().length === 0) ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 shadow-lg active:scale-95'}`}
             >
-              {showMap ? 'Use this location' : 'Save address'}
+              {showMap ? '✓ Confirm & Use This Location' : '✓ Save Address'}
             </button>
           </div>
         </div>
