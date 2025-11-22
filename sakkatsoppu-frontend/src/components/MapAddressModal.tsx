@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L, { Icon, LeafletEvent } from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { geocodeReverse, geocodeSearch } from '../services/api';
+import { geocodeReverse, geocodeSearch, getPublicDeliverySettings } from '../services/api';
+import { useQuery } from '@tanstack/react-query';
 
 // Fix default icon paths for Leaflet in bundlers
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
@@ -81,7 +82,7 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
   // Address fields
   const [flatNo, setFlatNo] = useState('');
   const [landmark, setLandmark] = useState('');
-  const [city, setCity] = useState('Mysore');
+  const [city, setCity] = useState('Mysuru');
   const [stateName, setStateName] = useState('Karnataka');
   const [pincode, setPincode] = useState('');
   const [search, setSearch] = useState('');
@@ -97,6 +98,55 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
     return !/^\d{6}$/.test(p);
   }, [pincode]);
   // City and State are fixed; no emptiness checks required
+
+  // Fetch available cities from delivery settings
+  type DeliverySettings = {
+    enabled: boolean;
+    minOrderSubtotal: number;
+    cities: Array<{
+      name: string;
+      basePrice: number;
+      pricePerKg: number;
+      freeDeliveryThreshold: number;
+    }>;
+  };
+
+  const { data: deliverySettings } = useQuery<DeliverySettings, Error>(
+    ['public', 'delivery-settings'],
+    async () => {
+      try {
+        const res = await getPublicDeliverySettings();
+        const d = res.data as Record<string, unknown>;
+        if (!d) throw new Error('No data');
+
+        // Backend schema: { enabled, minOrderSubtotal, cities: [{name, basePrice, pricePerKg, freeDeliveryThreshold}] }
+        const citiesArray = (d.cities || []) as DeliverySettings['cities'];
+
+        return {
+          enabled: (d.enabled as boolean) ?? true,
+          minOrderSubtotal: (d.minOrderSubtotal as number) ?? 0,
+          cities: citiesArray,
+        };
+      } catch {
+        // Fallback to default cities if API fails
+        return {
+          enabled: true,
+          minOrderSubtotal: 0,
+          cities: [
+            { name: 'Mysuru', basePrice: 50, pricePerKg: 15, freeDeliveryThreshold: 600 },
+            { name: 'Bengaluru', basePrice: 40, pricePerKg: 10, freeDeliveryThreshold: 500 }
+          ],
+        };
+      }
+    },
+    {
+      staleTime: 10 * 60_000,
+    }
+  );
+
+  const availableCities = useMemo(() => {
+    return deliverySettings?.cities?.map(c => c.name) || ['Mysuru', 'Bengaluru'];
+  }, [deliverySettings]);
 
   // Reverse geocode on marker move or initialization
   const reverse = useMemo(() => async (lat: number, lon: number) => {
@@ -125,18 +175,27 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
       const initial = defaultCenter || FALLBACK_CENTER;
       setCenter(initial);
       setMarker(initial);
+
+      // Get default city from available cities (first one)
+      const defaultCity = availableCities[0] || 'Mysuru';
+
       if (initialAddress) {
         setFlatNo(initialAddress.houseNo || '');
         setAddress(initialAddress.area || '');
         setLandmark(initialAddress.landmark || '');
-        setCity(initialAddress.city || 'Mysore');
+
+        // Check if the initial city is in available cities (case-insensitive)
+        const initialCityLower = (initialAddress.city || '').toLowerCase();
+        const matchingCity = availableCities.find(c => c.toLowerCase() === initialCityLower);
+        setCity(matchingCity || defaultCity);
+
         setStateName(initialAddress.state || 'Karnataka');
         setPincode(initialAddress.pincode || '');
       } else {
         setAddress('');
         setFlatNo('');
         setLandmark('');
-        setCity('Mysore');
+        setCity(defaultCity);
         setStateName('Karnataka');
         setPincode('');
         // Immediately get address for initial marker
@@ -161,7 +220,7 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
         );
       }
     }
-  }, [isOpen, defaultCenter, reverse, autoGeo, initialAddress]);
+  }, [isOpen, defaultCenter, reverse, autoGeo, initialAddress, availableCities]);
 
   // Forward geocoding (search)
   useEffect(() => {
@@ -315,13 +374,18 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">City</label>
-                <input
+                <label className="block text-xs font-medium text-gray-700 mb-1">City *</label>
+                <select
                   value={city}
-                  readOnly
-                  aria-readonly
-                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-700 cursor-not-allowed text-sm"
-                />
+                  onChange={(e) => setCity(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-green-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm bg-white"
+                >
+                  {availableCities.map((cityName) => (
+                    <option key={cityName} value={cityName}>
+                      {cityName}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">State</label>

@@ -1,0 +1,1 @@
+System.register(["./react-vendor-legacy-40b14165.js","./index-legacy-d5152941.js"],function(e,r){"use strict";var t,n;return{setters:[e=>{t=e.r},e=>{n=e.A}],execute:function(){e("u",function(){const e=t.useContext(n);if(!e)throw new Error("useAddToCartBar must be used within AddToCartBarProvider");return e})}}});

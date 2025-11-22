@@ -8,15 +8,6 @@ import { HomepageVideo } from '../types';
 
 const heroLogo = new URL('../../logo_final.jpg', import.meta.url).href;
 
-// Fallback dummy video for when API fails
-// Using a solid color video placeholder from a reliable CDN
-const FALLBACK_VIDEO = {
-  _id: 'fallback',
-  title: 'Fallback Video',
-  videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-  displayOrder: 1
-};
-
 // Content slides that will transition - Shorter, more concise
 const contentSlides = [
   {
@@ -120,24 +111,25 @@ export const VideoHeroSection: React.FC<VideoHeroSectionProps> = ({ startAnimati
     retry: 1
   });
 
-  // Use fetched videos or fallback
-  const videos = videosData && videosData.length > 0 ? videosData : [FALLBACK_VIDEO];
+  const videos = videosData || [];
 
   // Current content (cycles through contentSlides independently)
   const currentContent = contentSlides[currentContentSlide];
 
   // Auto-transition for content slides (3 seconds)
   useEffect(() => {
+    if (!videosData || videosData.length === 0) return;
+
     const timer = setInterval(() => {
       setCurrentContentSlide((prev) => (prev + 1) % contentSlides.length);
     }, 3000); // Change slide every 3 seconds
 
     return () => clearInterval(timer);
-  }, []);
+  }, [videosData]);
 
   // Video transitions (every 15 seconds if multiple videos, auto-loop)
   useEffect(() => {
-    if (videos.length <= 1) return;
+    if (!videosData || videosData.length === 0 || videos.length <= 1) return;
 
     const timer = setInterval(() => {
       setCurrentVideoIndex((prev) => (prev + 1) % videos.length);
@@ -145,10 +137,12 @@ export const VideoHeroSection: React.FC<VideoHeroSectionProps> = ({ startAnimati
     }, 15000); // Change video every 15 seconds, auto-loop through all
 
     return () => clearInterval(timer);
-  }, [videos.length]);
+  }, [videos.length, videosData]);
 
   // Scroll detection - pause video when scrolled out of view
   useEffect(() => {
+    if (!videosData || videosData.length === 0) return;
+
     const handleScroll = () => {
       if (!sectionRef.current || !videoRef.current) return;
 
@@ -172,7 +166,12 @@ export const VideoHeroSection: React.FC<VideoHeroSectionProps> = ({ startAnimati
     handleScroll(); // Initial check
 
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [currentVideoIndex]); // Add dependency to re-attach when video changes
+  }, [currentVideoIndex, videosData]); // Add dependency to re-attach when video changes
+
+  // If no videos available, don't render the section
+  if (!videosData || videosData.length === 0) {
+    return null;
+  }
 
   // Handle manual content slide change
   const handleSlideChange = (index: number) => {

@@ -6,30 +6,14 @@ import { getOrders, getProducts } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { EmptyState } from '../components/EmptyState';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeftIcon, MagnifyingGlassIcon, FunnelIcon } from '@heroicons/react/24/outline';
-import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeftIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { Package, Search } from 'lucide-react';
 import { Shimmer } from '../components/Shimmer';
 
 export function OrdersPage() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<'all' | 'pending' | 'confirmed' | 'delivered' | 'cancelled'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showFilterMenu, setShowFilterMenu] = useState(false);
-
-  type OrderStatus = 'pending' | 'confirmed' | 'delivered' | 'cancelled';
-  const normalizeStatus = (val?: string): OrderStatus => {
-    if (!val) return 'pending';
-    const s = String(val).trim().toLowerCase();
-    if (s === 'canceled') return 'cancelled';
-    if (s.startsWith('deliver')) return 'delivered';
-    if (s.startsWith('confirm')) return 'confirmed';
-    if (s.startsWith('pend')) return 'pending';
-    return (['pending','confirmed','delivered','cancelled'] as const).includes(s as OrderStatus)
-      ? (s as OrderStatus)
-      : 'pending';
-  };
 
   type OrderLike = Partial<Order> & {
     _id?: string;
@@ -103,23 +87,14 @@ export function OrdersPage() {
     effectiveOrders = raw ? (JSON.parse(raw) as OrderLike[]) : [];
   }
 
-  // Combined filter: by status AND search query
+  // Filter by search query (product name only)
   const filtered: OrderLike[] = useMemo(() => {
     let result = effectiveOrders;
 
-    // Filter by status
-    if (status !== 'all') {
-      result = result.filter((o) => normalizeStatus(o.status as string | undefined) === status);
-    }
-
-    // Filter by search query (product name or status)
+    // Filter by search query (product name)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter((order) => {
-        // Search by status
-        const orderStatus = normalizeStatus(order.status as string | undefined);
-        if (orderStatus.toLowerCase().includes(query)) return true;
-
         // Search by product name
         const items = (order.items || []) as Array<{ productId: string; name?: string; product?: Partial<Product> }>;
         return items.some((item) => {
@@ -133,38 +108,8 @@ export function OrdersPage() {
     }
 
     return result;
-  }, [effectiveOrders, status, searchQuery, productMap]);
+  }, [effectiveOrders, searchQuery, productMap]);
 
-  // Helper function for status badge color
-  const getStatusColor = (orderStatus: OrderStatus) => {
-    switch (orderStatus) {
-      case 'delivered':
-        return 'bg-green-500 text-white';
-      case 'cancelled':
-        return 'bg-red-500 text-white';
-      case 'pending':
-      case 'confirmed':
-      default:
-        return 'bg-yellow-400 text-gray-900';
-    }
-  };
-
-  const getStatusLabel = (orderStatus: OrderStatus) => {
-  switch (orderStatus) {
-    case 'delivered':
-      return 'Completed';
-    case 'pending':
-    case 'confirmed':
-      return 'In Process';
-    case 'cancelled':
-      return 'Cancelled';
-    default: {
-      // Prevent TS "never" error
-      const s = String(orderStatus || '');
-      return s.charAt(0).toUpperCase() + s.slice(1);
-    }
-  }
-};
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header with back button - Fixed */}
@@ -181,7 +126,7 @@ export function OrdersPage() {
         </div>
       </div>
 
-      {/* Search and Filter Bar - Fixed/Sticky */}
+      {/* Search Bar - Fixed/Sticky */}
       <div className="bg-gray-50 flex-shrink-0 border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="flex gap-3">
@@ -195,46 +140,7 @@ export function OrdersPage() {
                 className="w-full pl-10 pr-4 py-3 bg-white rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               />
             </div>
-            <button
-              onClick={() => setShowFilterMenu(!showFilterMenu)}
-              className="p-3 bg-white rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-              aria-label="Toggle filter menu"
-            >
-              <FunnelIcon className="h-5 w-5 text-gray-700" />
-            </button>
           </div>
-
-          {/* Filter Menu */}
-          <AnimatePresence>
-            {showFilterMenu && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mt-3 bg-white rounded-lg border border-gray-200 p-4 overflow-hidden"
-              >
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Filter by Status</h3>
-                <div className="flex flex-wrap gap-2">
-                  {(['all', 'pending', 'confirmed', 'delivered', 'cancelled'] as const).map((s) => (
-                    <button
-                      key={s}
-                      onClick={() => {
-                        setStatus(s);
-                        setShowFilterMenu(false);
-                      }}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                        status === s
-                          ? 'bg-green-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
 
@@ -263,10 +169,10 @@ export function OrdersPage() {
 
           {filtered.length === 0 && !isLoading ? (
             <div>
-              {effectiveOrders.length > 0 && status !== 'all' ? (
+              {effectiveOrders.length > 0 && searchQuery.trim() ? (
                 <EmptyState
-                  title={`No orders with status "${status}"`}
-                  description="Try switching the status filter to see other orders."
+                  title="No matching orders"
+                  description="Try adjusting your search query."
                   IconComponent={Search}
                 />
               ) : (
@@ -284,14 +190,12 @@ export function OrdersPage() {
           {/* Orders List */}
           <div className="space-y-4">
             {filtered.map((order, index) => {
-              const orderStatus = normalizeStatus(order.status as string | undefined);
-
               return (
                 <div
                   key={order._id || order.id || index}
                   className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 animate-fade-in-scale"
                 >
-                  {/* Order Header - Title and Status */}
+                  {/* Order Header - Title */}
                   <div className="flex justify-between items-center mb-3">
                     <div>
                       <p className="text-xs text-gray-500 mb-1">
@@ -314,9 +218,6 @@ export function OrdersPage() {
                         })()}
                       </p>
                     </div>
-                    <span className={`px-4 py-1.5 rounded-full text-xs font-semibold ${getStatusColor(orderStatus)}`}>
-                      {getStatusLabel(orderStatus)}
-                    </span>
                   </div>
 
                   {/* Order Items */}

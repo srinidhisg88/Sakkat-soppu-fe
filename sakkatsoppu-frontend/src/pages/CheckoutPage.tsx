@@ -55,7 +55,7 @@ export function CheckoutPage() {
       houseNo: '',
       landmark: '',
       area: '',
-      city: 'Mysore',
+      city: 'Mysuru',
       state: 'Karnataka',
       pincode: '',
     },
@@ -70,35 +70,57 @@ export function CheckoutPage() {
     return null;
   }, [user?.latitude, user?.longitude, formData.latitude, formData.longitude]);
 
-  // Delivery settings
+  // Delivery settings with city-specific pricing
   type DeliverySettings = {
     enabled: boolean;
-    deliveryFee: number;
-    freeDeliveryThreshold: number;
     minOrderSubtotal: number;
+    cities: Array<{
+      name: string;
+      basePrice: number;
+      pricePerKg: number;
+      freeDeliveryThreshold: number;
+    }>;
     updatedAt?: string;
   };
-  const { data: deliverySettings } = useQuery<DeliverySettings>({
-    queryKey: ['public', 'delivery-settings'],
-    queryFn: async () => {
+  const { data: deliverySettings } = useQuery<DeliverySettings, Error>(
+    ['public', 'delivery-settings'],
+    async () => {
       try {
         const res = await getPublicDeliverySettings();
-        const d = res.data as Partial<DeliverySettings> | undefined;
+        const d = res.data as Record<string, unknown>;
         if (!d) throw new Error('No data');
-        return {
-          enabled: d.enabled ?? true,
-          deliveryFee: d.deliveryFee ?? 0,
-          freeDeliveryThreshold: d.freeDeliveryThreshold ?? 0,
-          minOrderSubtotal: d.minOrderSubtotal ?? 0,
-          updatedAt: d.updatedAt,
+
+        // Backend schema: { enabled, minOrderSubtotal, cities: [{name, basePrice, pricePerKg, freeDeliveryThreshold}] }
+        const citiesArray = (d.cities || []) as DeliverySettings['cities'];
+
+        const settings: DeliverySettings = {
+          enabled: (d.enabled as boolean) ?? true,
+          minOrderSubtotal: (d.minOrderSubtotal as number) ?? 0,
+          cities: citiesArray,
+          updatedAt: d.updatedAt as string | undefined,
         };
-      } catch {
+
+        return settings;
+      } catch (err) {
+        console.error('Error fetching delivery settings:', err);
         // fallback and continue silently
-        return { enabled: true, deliveryFee: 0, freeDeliveryThreshold: 0, minOrderSubtotal: 0 } as DeliverySettings;
+        const fallback: DeliverySettings = {
+          enabled: true,
+          minOrderSubtotal: 0,
+          cities: [
+            { name: 'Mysuru', basePrice: 50, pricePerKg: 15, freeDeliveryThreshold: 600 },
+            { name: 'Bengaluru', basePrice: 40, pricePerKg: 10, freeDeliveryThreshold: 500 }
+          ],
+        };
+        return fallback;
       }
     },
-    staleTime: 10 * 60_000,
-  });
+    {
+      staleTime: 5 * 60_000, // Cache for 5 minutes (production-friendly)
+      cacheTime: 10 * 60_000, // Keep in cache for 10 minutes
+    }
+  );
+
 
   // Always sync formData with latest user address/phone/coords when user changes
   useEffect(() => {
@@ -109,7 +131,7 @@ export function CheckoutPage() {
           houseNo: '',
           landmark: '',
           area: '',
-          city: 'Mysore',
+          city: 'Mysuru',
           state: 'Karnataka',
           pincode: '',
         },
@@ -118,7 +140,7 @@ export function CheckoutPage() {
         phone: user.phone || '',
       }));
     }
-  }, [user]);
+  }, [user, user?.address, user?.address?.city]);
 
   // Redirect to cart if no items
   useEffect(() => {
@@ -155,7 +177,6 @@ export function CheckoutPage() {
     queryFn: async () => {
       try {
         const res = await getCoupons({ page: 1, limit: 100 });
-        console.log(res)
         const d: unknown = res.data;
         let list: RawCoupon[] = [];
         if (Array.isArray(d)) list = d as RawCoupon[];
@@ -201,17 +222,60 @@ export function CheckoutPage() {
   }, [appliedCoupon, totalPrice]);
 
   const netSubtotal = Math.max(0, totalPrice - discountAmount);
-  const computedDeliveryFee = (() => {
-    const s = deliverySettings;
-    if (!s) return 0;
-    if (!s.enabled) return 0;
-    if (s.freeDeliveryThreshold > 0 && netSubtotal >= s.freeDeliveryThreshold) return 0;
-    return s.deliveryFee || 0;
-  })();
+
+  // Calculate total weight from cart items (in kg)
+  const totalWeight = useMemo(() => {
+    return items.reduce((total, item) => {
+      const weightInGrams = item.product.g || 0;
+      const weightInKg = weightInGrams / 1000;
+      return total + (weightInKg * item.quantity);
+    }, 0);
+  }, [items]);
+
+  // Calculate delivery fee based on city, weight, and order subtotal
+  const computedDeliveryFee = useMemo(() => {
+    const settings = deliverySettings as DeliverySettings | undefined;
+    // Return 0 if no delivery settings available
+    if (!settings || !settings.cities || settings.cities.length === 0) {
+      return 0;
+    }
+
+    // Get city from user's address (case-insensitive match)
+    const userCity = (formData.address.city || '').toLowerCase().trim();
+    if (!userCity) {
+      return 0;
+    }
+
+    // Find matching city settings
+    const citySettings = settings.cities.find(c => c.name.toLowerCase() === userCity);
+    if (!citySettings) {
+      return 0;
+    }
+
+    // Check if order qualifies for free delivery
+    if (citySettings.freeDeliveryThreshold > 0 && netSubtotal >= citySettings.freeDeliveryThreshold) {
+      return 0; // Free delivery
+    }
+
+    // Calculate weight-based delivery fee
+    // Base price covers first 1kg, then pricePerKg for each additional kg (rounded up)
+    const basePrice = citySettings.basePrice;
+
+    if (totalWeight <= 1) {
+      return basePrice;
+    }
+
+    const additionalWeight = totalWeight - 1;
+    const additionalKg = Math.ceil(additionalWeight); // Round up to nearest kg
+    const additionalCost = additionalKg * citySettings.pricePerKg;
+
+    return basePrice + additionalCost;
+  }, [deliverySettings, formData, netSubtotal, totalWeight]);
+
   const finalAmount = Math.max(0, netSubtotal + computedDeliveryFee);
   // Minimum order is checked on subtotal BEFORE coupon and EXCLUDING delivery fee
   const belowMinBy = (() => {
-    const s = deliverySettings;
+    const s = deliverySettings as DeliverySettings | undefined;
     if (!s) return 0;
     const min = s.minOrderSubtotal || 0;
     return Math.max(0, min - totalPrice);
@@ -245,7 +309,7 @@ export function CheckoutPage() {
         show('Please enter your delivery address.', { type: 'warning' });
         return;
       }
-      if (deliverySettings?.enabled && belowMinBy > 0) {
+      if ((deliverySettings as DeliverySettings | undefined)?.enabled && belowMinBy > 0) {
         setError(`Add ₹${belowMinBy} more to reach minimum order value.`);
         show(`Add ₹${belowMinBy} more to reach minimum order value.`, { type: 'warning' });
         return;
@@ -546,12 +610,16 @@ export function CheckoutPage() {
                 <p className="text-sm text-amber-700 bg-amber-50 p-3 rounded-xl border border-amber-200">Add ₹{belowMinBy} more to reach minimum order value.</p>
               )}
 
+              {!formData.address.city && (
+                <p className="text-sm text-red-700 bg-red-50 p-3 rounded-xl border border-red-200">Please select a delivery city to continue.</p>
+              )}
+
               {/* Desktop submit button - hidden on mobile */}
               <button
                 type="submit"
-                disabled={loading || belowMinBy > 0}
+                disabled={loading || belowMinBy > 0 || !formData.address.city}
                 className={`hidden md:block w-full py-4 rounded-xl font-semibold transition-all ${
-                  loading || belowMinBy > 0
+                  loading || belowMinBy > 0 || !formData.address.city
                     ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
                     : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg hover:shadow-xl'
                 }`}
@@ -627,19 +695,28 @@ export function CheckoutPage() {
                   )}
                   <div className="flex justify-between text-gray-700">
                     <span>Delivery Fee</span>
-                    <span className="font-medium">{computedDeliveryFee === 0 ? '🎁 Free' : `₹${computedDeliveryFee}`}</span>
+                    <span className="font-medium">
+                      {computedDeliveryFee === 0 ? '🎁 Free' : `₹${computedDeliveryFee}`}
+                    </span>
                   </div>
                   <div className="flex justify-between text-lg pt-3 border-t border-green-200">
                     <span className="font-bold text-green-900">Total Payable</span>
                     <span className="font-bold text-green-900">₹{finalAmount}</span>
                   </div>
-                  {deliverySettings && deliverySettings.enabled && (
-                    <div className="text-xs text-gray-600 bg-amber-50 p-2 rounded-lg">
-                      {deliverySettings.freeDeliveryThreshold > 0 && netSubtotal < deliverySettings.freeDeliveryThreshold ? (
-                        <p>🚚 Free delivery over ₹{deliverySettings.freeDeliveryThreshold}</p>
-                      ) : null}
-                    </div>
-                  )}
+                  {deliverySettings && (deliverySettings as unknown as DeliverySettings).enabled && (deliverySettings as unknown as DeliverySettings).cities && (() => {
+                    const settings = deliverySettings as unknown as DeliverySettings;
+                    const userCity = (formData.address.city || '').toLowerCase();
+                    const citySettings = settings.cities.find((c) => c.name.toLowerCase() === userCity);
+                    if (!citySettings) return null;
+
+                    return (
+                      <div className="text-xs text-gray-600 bg-amber-50 p-2 rounded-lg">
+                        {citySettings.freeDeliveryThreshold > 0 && netSubtotal < citySettings.freeDeliveryThreshold ? (
+                          <p> Free delivery over ₹{citySettings.freeDeliveryThreshold}</p>
+                        ) : null}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
@@ -792,15 +869,31 @@ export function CheckoutPage() {
                 )}
                 <div className="flex justify-between text-sm text-gray-700">
                   <span>Delivery</span>
-                  <span className="font-medium">{computedDeliveryFee === 0 ? '🎁 Free' : `₹${computedDeliveryFee}`}</span>
+                  <span className="font-medium">
+                    {computedDeliveryFee === 0 ? '🎁 Free' : `₹${computedDeliveryFee}`}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center pt-2 border-t border-green-300">
                   <span className="text-base font-bold text-green-900">Total</span>
                   <span className="text-xl font-bold text-green-900">₹{finalAmount}</span>
                 </div>
-                {deliverySettings && deliverySettings.enabled && deliverySettings.freeDeliveryThreshold > 0 && netSubtotal < deliverySettings.freeDeliveryThreshold && (
-                  <p className="text-xs text-amber-700 bg-amber-50 px-2 py-1.5 rounded">
-                    🚚 Free delivery over ₹{deliverySettings.freeDeliveryThreshold}
+                {deliverySettings && (deliverySettings as unknown as DeliverySettings).enabled && (deliverySettings as unknown as DeliverySettings).cities && (() => {
+                  const settings = deliverySettings as unknown as DeliverySettings;
+                  const userCity = (formData.address.city || '').toLowerCase();
+                  const citySettings = settings.cities.find((c) => c.name.toLowerCase() === userCity);
+                  if (!citySettings) return null;
+                  if (citySettings.freeDeliveryThreshold > 0 && netSubtotal < citySettings.freeDeliveryThreshold) {
+                    return (
+                      <p className="text-xs text-amber-700 bg-amber-50 px-2 py-1.5 rounded">
+                         Free delivery over ₹{citySettings.freeDeliveryThreshold}
+                      </p>
+                    );
+                  }
+                  return null;
+                })()}
+                {!formData.address.city && (
+                  <p className="text-xs text-red-700 bg-red-50 px-2 py-1.5 rounded mt-2">
+                    Please select a delivery city
                   </p>
                 )}
               </div>
@@ -812,9 +905,9 @@ export function CheckoutPage() {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={loading || belowMinBy > 0}
+              disabled={loading || belowMinBy > 0 || !formData.address.city}
               className={`w-full py-4 rounded-2xl font-bold text-base transition-all ${
-                loading || belowMinBy > 0
+                loading || belowMinBy > 0 || !formData.address.city
                   ? 'bg-gray-300 text-gray-600 cursor-not-allowed'
                   : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white shadow-lg active:scale-95'
               }`}

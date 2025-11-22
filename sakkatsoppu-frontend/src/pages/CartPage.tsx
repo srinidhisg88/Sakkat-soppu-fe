@@ -20,9 +20,13 @@ export function CartPage() {
   // Public delivery settings
   type DeliverySettings = {
     enabled: boolean;
-    deliveryFee: number;
-    freeDeliveryThreshold: number;
     minOrderSubtotal: number;
+    cities: Array<{
+      name: string;
+      basePrice: number;
+      pricePerKg: number;
+      freeDeliveryThreshold: number;
+    }>;
   };
   const { data: deliverySettings, isLoading: settingsLoading } = useQuery<DeliverySettings>({
     queryKey: ['public', 'delivery-settings'],
@@ -33,12 +37,18 @@ export function CartPage() {
         if (!d) throw new Error('No data');
         return {
           enabled: d.enabled ?? true,
-          deliveryFee: d.deliveryFee ?? 0,
-          freeDeliveryThreshold: d.freeDeliveryThreshold ?? 0,
           minOrderSubtotal: d.minOrderSubtotal ?? 0,
+          cities: d.cities ?? [],
         };
       } catch {
-        return { enabled: true, deliveryFee: 0, freeDeliveryThreshold: 0, minOrderSubtotal: 0 } as DeliverySettings;
+        return {
+          enabled: true,
+          minOrderSubtotal: 0,
+          cities: [
+            { name: 'Mysuru', basePrice: 50, pricePerKg: 15, freeDeliveryThreshold: 600 },
+            { name: 'Bengaluru', basePrice: 40, pricePerKg: 10, freeDeliveryThreshold: 500 }
+          ]
+        } as DeliverySettings;
       }
     },
     staleTime: 10 * 60_000,
@@ -267,62 +277,10 @@ export function CartPage() {
             </div>
           </div>
 
-          {/* Right Column: Order Summary (1/3 width on desktop, hidden on mobile) */}
+          {/* Right Column: Checkout Button (1/3 width on desktop, hidden on mobile) */}
           <div className="hidden md:block md:col-span-1">
             <div className="sticky top-24">
               {Banner}
-
-              {/* Order Summary */}
-              <div className="bg-gray-50 rounded-xl p-4 mb-3">
-                <h2 className="text-lg font-bold text-gray-900 mb-3">Order Summary</h2>
-
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between text-gray-700">
-                    <span>Sub Total</span>
-                    <span className="font-semibold">₹{totalPrice.toFixed(2)}</span>
-                  </div>
-
-                  {settingsLoading ? (
-                    <div className="flex justify-between text-gray-700">
-                      <span>Delivery fee</span>
-                      <Shimmer width="w-12" height="h-4" />
-                    </div>
-                  ) : deliverySettings && deliverySettings.enabled ? (
-                    <div className="flex justify-between text-gray-700">
-                      <span>Delivery fee</span>
-                      <span className="font-semibold">
-                        {deliverySettings.freeDeliveryThreshold > 0 && totalPrice >= deliverySettings.freeDeliveryThreshold
-                          ? 'Free'
-                          : (deliverySettings.deliveryFee > 0 ? `₹${deliverySettings.deliveryFee.toFixed(2)}` : 'Free')}
-                      </span>
-                    </div>
-                  ) : null}
-                </div>
-
-                {/* Total */}
-                <div className="flex justify-between items-center pt-3 mt-3 border-t border-gray-200">
-                  <span className="text-lg font-bold text-gray-900">Total</span>
-                  {settingsLoading ? (
-                    <Shimmer width="w-20" height="h-6" />
-                  ) : (
-                    <span className="text-2xl font-bold text-gray-900">
-                      ₹{(deliverySettings && deliverySettings.enabled
-                        ? (deliverySettings.freeDeliveryThreshold > 0 && totalPrice >= deliverySettings.freeDeliveryThreshold
-                            ? totalPrice
-                            : totalPrice + (deliverySettings.deliveryFee || 0))
-                        : totalPrice).toFixed(2)}
-                    </span>
-                  )}
-                </div>
-
-                {/* Hints */}
-                {!settingsLoading && deliverySettings && deliverySettings.enabled && deliverySettings.freeDeliveryThreshold > 0 && totalPrice < deliverySettings.freeDeliveryThreshold && (
-                  <p className="text-xs text-gray-600 mt-2">Free delivery over ₹{deliverySettings.freeDeliveryThreshold}</p>
-                )}
-                {!settingsLoading && disableCheckout && (
-                  <p className="text-xs text-amber-700 mt-2">Add ₹{belowMinBy} more to reach minimum order value.</p>
-                )}
-              </div>
 
               {/* Checkout Button */}
               <motion.button
@@ -344,62 +302,14 @@ export function CartPage() {
         </div>
       </div>
 
-      {/* Mobile: Sticky Order Summary - Fixed at Bottom Above Nav */}
+      {/* Mobile: Sticky Checkout Button - Fixed at Bottom Above Nav */}
       <div className="md:hidden fixed bottom-16 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
         <div className="px-4 py-4">
           {Banner}
 
-          {/* Order Summary */}
-          <div className="bg-gray-50 rounded-xl p-4 mb-3">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">Order Summary</h2>
-
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-700">
-                <span>Sub Total</span>
-                <span className="font-semibold">₹{totalPrice.toFixed(2)}</span>
-              </div>
-
-              {settingsLoading ? (
-                <div className="flex justify-between text-gray-700">
-                  <span>Delivery fee</span>
-                  <Shimmer width="w-12" height="h-4" />
-                </div>
-              ) : deliverySettings && deliverySettings.enabled ? (
-                <div className="flex justify-between text-gray-700">
-                  <span>Delivery fee</span>
-                  <span className="font-semibold">
-                    {deliverySettings.freeDeliveryThreshold > 0 && totalPrice >= deliverySettings.freeDeliveryThreshold
-                      ? 'Free'
-                      : (deliverySettings.deliveryFee > 0 ? `₹${deliverySettings.deliveryFee.toFixed(2)}` : 'Free')}
-                  </span>
-                </div>
-              ) : null}
-            </div>
-
-            {/* Total */}
-            <div className="flex justify-between items-center pt-3 mt-3 border-t border-gray-200">
-              <span className="text-lg font-bold text-gray-900">Total</span>
-              {settingsLoading ? (
-                <Shimmer width="w-20" height="h-6" />
-              ) : (
-                <span className="text-2xl font-bold text-gray-900">
-                  ₹{(deliverySettings && deliverySettings.enabled
-                    ? (deliverySettings.freeDeliveryThreshold > 0 && totalPrice >= deliverySettings.freeDeliveryThreshold
-                        ? totalPrice
-                        : totalPrice + (deliverySettings.deliveryFee || 0))
-                    : totalPrice).toFixed(2)}
-                </span>
-              )}
-            </div>
-
-            {/* Hints */}
-            {!settingsLoading && deliverySettings && deliverySettings.enabled && deliverySettings.freeDeliveryThreshold > 0 && totalPrice < deliverySettings.freeDeliveryThreshold && (
-              <p className="text-xs text-gray-600 mt-2">Free delivery over ₹{deliverySettings.freeDeliveryThreshold}</p>
-            )}
-            {!settingsLoading && disableCheckout && (
-              <p className="text-xs text-amber-700 mt-2">Add ₹{belowMinBy} more to reach minimum order value.</p>
-            )}
-          </div>
+          {!settingsLoading && disableCheckout && (
+            <p className="text-xs text-amber-700 mb-3 text-center">Add ₹{belowMinBy} more to reach minimum order value.</p>
+          )}
 
           {/* Checkout Button */}
           <motion.button

@@ -6,13 +6,6 @@ import { Product } from '../types';
 import { deriveUnitLabel } from '../utils/format';
 import { Shimmer } from '../components/Shimmer';
 
-const statusColors: Record<string, string> = {
-  pending: 'bg-yellow-100 text-yellow-800',
-  confirmed: 'bg-blue-100 text-blue-800',
-  delivered: 'bg-green-100 text-green-800',
-  cancelled: 'bg-red-100 text-red-800',
-};
-
 export default function OrderDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -154,13 +147,18 @@ export default function OrderDetailsPage() {
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Order Details</h1>
+      {/* Thank you message */}
+      <div className="bg-green-50 border-2 border-green-200 rounded-xl p-6 text-center shadow-sm">
+        <div className="text-green-800 font-bold text-xl mb-2">
+          Thanks for ordering!
         </div>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${statusColors[order.status || 'pending'] || 'bg-gray-100 text-gray-800'}`}>
-          {order.status || 'pending'}
-        </span>
+        <p className="text-green-700 text-base">
+          Your order has been confirmed.
+        </p>
+      </div>
+
+      <div>
+        <h1 className="text-2xl font-bold">Order Details</h1>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6 space-y-4">
@@ -253,18 +251,6 @@ export default function OrderDetailsPage() {
           View All Orders
         </Link>
       </div>
-
-      {/* Order Confirmation Message */}
-      {order.status === 'pending' && (
-        <div className="mt-8 bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-          <div className="text-green-800 font-semibold text-lg mb-2">
-            ✓ Order Placed Successfully!
-          </div>
-          <p className="text-green-700 text-sm">
-            Thank you for your order. We'll notify you once it's confirmed and on its way.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
