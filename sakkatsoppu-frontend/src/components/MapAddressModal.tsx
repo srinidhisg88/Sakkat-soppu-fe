@@ -141,6 +141,7 @@ export default function MapAddressModal({ isOpen, onClose, onConfirm, defaultCen
     },
     {
       staleTime: 10 * 60_000,
+      refetchOnMount: 'always', // Always fetch fresh data when component mounts
     }
   );
 

@@ -118,6 +118,7 @@ export function CheckoutPage() {
     {
       staleTime: 5 * 60_000, // Cache for 5 minutes (production-friendly)
       cacheTime: 10 * 60_000, // Keep in cache for 10 minutes
+      refetchOnMount: 'always', // Always fetch fresh data when component mounts
     }
   );
 
