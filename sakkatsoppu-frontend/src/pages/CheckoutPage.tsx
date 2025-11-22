@@ -242,9 +242,20 @@ export function CheckoutPage() {
     }
 
     // Get city from user's address (case-insensitive match)
-    const userCity = (formData.address.city || '').toLowerCase().trim();
+    let userCity = (formData.address.city || '').toLowerCase().trim();
     if (!userCity) {
       return 0;
+    }
+
+    // Map city aliases to standard names
+    const cityAliases: Record<string, string> = {
+      'mysore': 'mysuru',
+      'bangalore': 'bengaluru',
+    };
+
+    // Apply alias mapping if exists
+    if (cityAliases[userCity]) {
+      userCity = cityAliases[userCity];
     }
 
     // Find matching city settings
