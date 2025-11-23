@@ -24,7 +24,7 @@ const contentSlides = [
   },
   {
     title: "Doorstep Delivery",
-    subtitle: "Order Mon–Sat, delivered Sun & Mon",
+    subtitle: "Order anytime, delivered fresh after harvesting",
     highlight: "Convenient",
     icon: <CalendarDaysIcon className="h-5 w-5" />
   },

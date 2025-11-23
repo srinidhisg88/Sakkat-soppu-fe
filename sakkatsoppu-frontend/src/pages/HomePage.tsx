@@ -23,7 +23,7 @@ const features = [
   {
     icon: <CalendarDaysIcon className="h-6 w-6" />,
     title: "Delivery Schedule",
-    description: "Order anytime Mon–Sat, enjoy doorstep delivery on Sun & Mon – freshness timed perfectly for you!"
+    description: "Order anytime and enjoy doorstep delivery right after harvesting – freshness delivered straight to you!"
   },
   {
     icon: <UserGroupIcon className="h-6 w-6" />,
