@@ -33,6 +33,7 @@ import { StockProvider } from './context/StockContext';
 import LiveCartReconciler from './components/LiveCartReconciler';
 import { PoliciesModalProvider } from './components/PoliciesModalProvider';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import FloatingWhatsAppButton from './components/FloatingWhatsAppButton';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -130,6 +131,7 @@ function App() {
                 </main>
                 <Footer />
                 <MobileBottomNav />
+                <FloatingWhatsAppButton />
               </motion.div>
 
               {!splashDone && (
