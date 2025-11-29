@@ -2,13 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useLocation as useGeoLocation } from "../hooks/useLocation";
-import {
-  UserIcon,
-  EnvelopeIcon,
-  LockClosedIcon,
-  PhoneIcon,
-  MapPinIcon,
-} from "@heroicons/react/24/outline";
 
 interface SignupFormData {
   name: string;
@@ -140,22 +133,21 @@ export function SignupPage() {
   }, [loginWithGoogle, navigate, googleClientId]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-2 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-2 bg-white p-4 sm:p-6 rounded-2xl shadow-xl">
         <div className="text-center">
-          <div className="mx-auto h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-white overflow-hidden shadow">
+          <div className="mx-auto h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-white overflow-hidden shadow">
             <img src={new URL('../../logo_final.jpg', import.meta.url).href} alt="Logo" className="w-full h-full object-contain" />
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Create account</h2>
-          <p className="mt-2 text-sm text-gray-600">Sign up to start ordering fresh produce</p>
+          <h2 className="mt-2 text-xl sm:text-2xl font-extrabold text-gray-900">Create account</h2>
+          <p className="mt-1 text-xs sm:text-sm text-gray-600">Sign up to start ordering fresh produce</p>
         </div>
 
-        {error && <div className="bg-red-50 text-red-700 p-3 rounded-lg">{error}</div>}
+        {error && <div className="bg-red-50 text-red-700 p-2 rounded-lg text-sm">{error}</div>}
 
-  <form onSubmit={handleSubmit} className="space-y-6">
+  <form onSubmit={handleSubmit} className="space-y-2">
           {/* Name */}
-          <div className="relative">
-            <UserIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+          <div>
             <input
               id="name"
               name="name"
@@ -164,13 +156,12 @@ export function SignupPage() {
               value={formData.name}
               onChange={handleChange}
               placeholder="Full Name"
-              className="w-full px-3 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"
             />
           </div>
 
           {/* Email */}
-          <div className="relative">
-            <EnvelopeIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+          <div>
             <input
               id="email"
               name="email"
@@ -179,13 +170,12 @@ export function SignupPage() {
               value={formData.email}
               onChange={handleChange}
               placeholder="Email Address"
-              className="w-full px-3 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"
             />
           </div>
 
           {/* Password */}
-          <div className="relative">
-            <LockClosedIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+          <div>
             <input
               id="password"
               name="password"
@@ -194,13 +184,12 @@ export function SignupPage() {
               value={formData.password}
               onChange={handleChange}
               placeholder="Password"
-              className="w-full px-3 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"
             />
           </div>
 
           {/* Phone */}
-          <div className="relative">
-            <PhoneIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+          <div>
             <input
               id="phone"
               name="phone"
@@ -209,13 +198,12 @@ export function SignupPage() {
               value={formData.phone}
               onChange={handleChange}
               placeholder="Phone Number"
-              className="w-full px-3 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"
             />
           </div>
 
           {/* Address */}
-          <div className="relative">
-            <MapPinIcon className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+          <div>
             <input
               id="address"
               name="address"
@@ -224,7 +212,7 @@ export function SignupPage() {
               value={formData.address}
               onChange={handleChange}
               placeholder="Address"
-              className="w-full px-3 py-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 text-sm"
             />
           </div>
           {locationError && <p className="text-sm text-red-600 mt-1">{locationError}</p>}
@@ -237,7 +225,7 @@ export function SignupPage() {
             type="button"
             onClick={handleGetLocation}
             disabled={isGettingLocation}
-            className="w-full py-3 px-4 rounded-lg border bg-green-50 text-green-700 hover:bg-green-100"
+            className="w-full py-2 px-4 rounded-lg border bg-green-50 text-green-700 hover:bg-green-100 text-sm"
           >
             {isGettingLocation ? "Getting Location..." : "Use my current location"}
           </button>
@@ -245,43 +233,48 @@ export function SignupPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full py-3 px-4 rounded-lg bg-green-600 text-white hover:bg-green-700"
+            className="w-full py-2 px-4 rounded-lg bg-green-600 text-white hover:bg-green-700 text-sm font-medium"
           >
             Create Account
           </button>
 
-          <div className="relative">
-            <div className="flex items-center my-4">
-              <div className="flex-grow border-t border-gray-200" />
-              <span className="mx-3 text-gray-400 text-sm">or</span>
-              <div className="flex-grow border-t border-gray-200" />
-            </div>
-            {googleClientId ? (
-              <div ref={googleBtnRef} className="flex justify-center" style={{ minHeight: 44 }} />
-            ) : (
-              <div className="flex flex-col items-center gap-2">
-                <button
-                  type="button"
-                  disabled
-                  className="w-full max-w-xs flex items-center justify-center gap-2 rounded-full bg-blue-600 text-white px-4 py-3 opacity-70 cursor-not-allowed"
-                  title="Google sign-up unavailable"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5">
-                    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.8 31.7 29.3 35 24 35c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.6 5.1 29.6 3 24 3 12 3 9 7.3 6.3 14.7z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.2 16.5 18.7 13 24 13c3 0 5.7 1.1 7.8 3l5.7-5.7C34.6 5.1 29.6 3 24 3 16 3 9 7.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 45c5.2 0 10-2 13.6-5.3l-6.3-5.3C29.1 35.5 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.6 5.1C8.7 40.6 15.8 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1 2.9-3.1 5.2-5.7 6.8l.1.1 6.3 5.3c-.4.3 7 5 7 5 4.1-3.8 6.5-9.4 6.5-15.9 0-1.2-.1-2.3-.4-3.5z"/></svg>
-                  Sign up with Google
-                </button>
-                <p className="text-xs text-gray-500">Set VITE_GOOGLE_CLIENT_ID to enable</p>
-              </div>
-            )}
-          </div>
-
-          <p className="text-center text-sm text-gray-600">
+          <p className="text-center text-sm text-gray-600 pt-2">
             Already have an account?{" "}
             <Link to="/login" className="font-medium text-green-600 hover:text-green-500">
               Sign in
             </Link>
           </p>
         </form>
+
+        {/* Divider */}
+        <div className="relative my-2">
+          <div className="flex items-center">
+            <div className="flex-grow border-t border-gray-200" />
+            <span className="mx-2 text-gray-400 text-xs">or</span>
+            <div className="flex-grow border-t border-gray-200" />
+          </div>
+        </div>
+
+        {/* Google Button */}
+        <div>
+          {googleClientId ? (
+            <div ref={googleBtnRef} className="flex justify-center" style={{ minHeight: 40 }} />
+          ) : (
+            <div className="flex flex-col items-center gap-1">
+              <button
+                type="button"
+                disabled
+                className="w-full flex items-center justify-center gap-2 rounded-full bg-blue-600 text-white px-4 py-2 text-sm opacity-70 cursor-not-allowed"
+                title="Google sign-up unavailable"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5">
+                  <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.8 31.7 29.3 35 24 35c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 3l5.7-5.7C34.6 5.1 29.6 3 24 3 12 3 9 7.3 6.3 14.7z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.2 16.5 18.7 13 24 13c3 0 5.7 1.1 7.8 3l5.7-5.7C34.6 5.1 29.6 3 24 3 16 3 9 7.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 45c5.2 0 10-2 13.6-5.3l-6.3-5.3C29.1 35.5 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.6 5.1C8.7 40.6 15.8 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1 2.9-3.1 5.2-5.7 6.8l.1.1 6.3 5.3c-.4.3 7 5 7 5 4.1-3.8 6.5-9.4 6.5-15.9 0-1.2-.1-2.3-.4-3.5z"/></svg>
+                Sign up with Google
+              </button>
+              <p className="text-xs text-gray-500">Set VITE_GOOGLE_CLIENT_ID to enable</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

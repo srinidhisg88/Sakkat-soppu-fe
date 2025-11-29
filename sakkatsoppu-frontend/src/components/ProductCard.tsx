@@ -189,7 +189,7 @@ export function ProductCard({ product }: ProductCardProps) {
               <button
                 onClick={handleAddToCart}
                 disabled={remaining <= 0}
-                className={`w-full py-2.5 px-3 rounded-lg text-white font-medium flex items-center justify-center gap-2 transition-all duration-300 text-sm sm:text-base active:scale-95
+                className={`w-full py-2.5 px-2 sm:px-3 rounded-lg text-white font-medium flex items-center justify-center gap-1 sm:gap-2 transition-all duration-300 text-xs sm:text-base active:scale-95
                   ${
                     remaining > 0
                       ? 'bg-green-600 hover:bg-green-700 shadow-md hover:shadow-lg active:shadow-sm'
@@ -197,7 +197,7 @@ export function ProductCard({ product }: ProductCardProps) {
                   }`}
               >
                 <ShoppingCartIcon className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
-                <span className="truncate">{remaining > 0 ? 'Add' : 'Out of Stock'}</span>
+                <span className="whitespace-nowrap text-[11px] sm:text-base">{remaining > 0 ? 'Add' : 'Out of Stock'}</span>
               </button>
             </div>
           )}

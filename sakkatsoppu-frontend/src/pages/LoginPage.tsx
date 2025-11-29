@@ -104,19 +104,19 @@ export function LoginPage() {
   }, [loginWithGoogle, navigate, location.state, googleClientId]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-2 px-4 sm:px-6 lg:px-8">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="max-w-md w-full space-y-8 bg-white p-8 rounded-2xl shadow-xl"
+        className="max-w-md w-full space-y-3 bg-white p-4 sm:p-6 rounded-2xl shadow-xl"
       >
         <div>
           <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.4 }}
-            className="mx-auto h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-white overflow-hidden shadow"
+            className="mx-auto h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-white overflow-hidden shadow"
           >
             <img src={authLogo} alt="Logo" className="w-full h-full object-contain" />
           </motion.div>
@@ -124,7 +124,7 @@ export function LoginPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
-            className="mt-6 text-center text-3xl font-extrabold text-gray-900"
+            className="mt-2 text-center text-xl sm:text-2xl font-extrabold text-gray-900"
           >
             Welcome Back
           </motion.h2>
@@ -132,7 +132,7 @@ export function LoginPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="mt-2 text-center text-sm text-gray-600"
+            className="mt-1 text-center text-xs sm:text-sm text-gray-600"
           >
             Sign in to access fresh produce from local farmers
           </motion.p>
@@ -156,9 +156,9 @@ export function LoginPage() {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.4 }}
           onSubmit={handleSubmit}
-          className="mt-8 space-y-6"
+          className="space-y-3"
         >
-          <div className="rounded-md shadow-sm space-y-4">
+          <div className="rounded-md shadow-sm space-y-3">
             <div>
               <label htmlFor="email" className="sr-only">
                 Email address
@@ -176,7 +176,7 @@ export function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none relative block w-full px-3 py-3 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                   placeholder="Email address"
                 />
               </div>
@@ -199,7 +199,7 @@ export function LoginPage() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none relative block w-full px-3 py-3 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
                   placeholder="Password"
                 />
               </div>
@@ -211,7 +211,7 @@ export function LoginPage() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
             >
               <span className="absolute left-0 inset-y-0 flex items-center pl-3">
                 <LockClosedIcon className="h-5 w-5 text-green-500 group-hover:text-green-400" />
@@ -246,13 +246,21 @@ export function LoginPage() {
           </motion.div>
         </motion.form>
 
-        {/* Google Button */}
-        <div className="relative">
-          <div className="flex items-center my-4">
+        {/* Divider */}
+        <div className="relative my-2">
+          <div className="flex items-center">
             <div className="flex-grow border-t border-gray-200" />
-            <span className="mx-3 text-gray-400 text-sm">or</span>
+            <span className="mx-2 text-gray-400 text-xs">or</span>
             <div className="flex-grow border-t border-gray-200" />
           </div>
+        </div>
+
+        {/* Google Button */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+        >
           {googleClientId ? (
             <div ref={googleBtnRef} className="flex justify-center" style={{ minHeight: 44 }} />
           ) : (
@@ -260,7 +268,7 @@ export function LoginPage() {
               <button
                 type="button"
                 disabled
-                className="w-full max-w-xs flex items-center justify-center gap-2 rounded-full bg-blue-600 text-white px-4 py-3 opacity-70 cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 rounded-full bg-blue-600 text-white px-4 py-2 text-sm opacity-70 cursor-not-allowed"
                 title="Google sign-in unavailable"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" className="h-5 w-5">
@@ -270,7 +278,7 @@ export function LoginPage() {
               <p className="text-xs text-gray-500">Set VITE_GOOGLE_CLIENT_ID to enable</p>
             </div>
           )}
-        </div>
+        </motion.div>
       </motion.div>
     </div>
   );
