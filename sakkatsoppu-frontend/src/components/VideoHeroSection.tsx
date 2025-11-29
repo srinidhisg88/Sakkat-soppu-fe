@@ -393,8 +393,7 @@ export const VideoHeroSection: React.FC<VideoHeroSectionProps> = ({ startAnimati
                 className="relative w-full lg:w-64 xl:w-72 overflow-hidden shadow-2xl lg:rounded-3xl lg:ring-4 lg:ring-white/50"
                 onMouseEnter={() => setShowControls(true)}
                 onMouseLeave={() => setShowControls(false)}
-                onTouchStart={() => setShowControls(true)}
-                onTouchEnd={() => setTimeout(() => setShowControls(false), 3000)}
+                onClick={() => setShowControls(!showControls)}
                 style={{
                   aspectRatio: '9 / 16',
                   maxHeight: '80vh',
